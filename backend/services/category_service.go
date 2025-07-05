@@ -1,0 +1,242 @@
+package services
+
+import (
+	"fmt"
+
+	"github.com/tonnarruda/my-personal-finance/database"
+	"github.com/tonnarruda/my-personal-finance/structs"
+	"github.com/tonnarruda/my-personal-finance/utils"
+)
+
+type CategoryService struct {
+	db *database.Database
+}
+
+// NewCategoryService cria uma nova instância do serviço de categorias
+func NewCategoryService(db *database.Database) *CategoryService {
+	return &CategoryService{db: db}
+}
+
+// CreateCategory cria uma nova categoria
+func (s *CategoryService) CreateCategory(req structs.CreateCategoryRequest) (*structs.Category, error) {
+	// Validar UUID do parent_id se fornecido
+	if err := req.ValidateParentID(); err != nil {
+		return nil, err
+	}
+
+	// Validação: se é uma subcategoria, verificar se a categoria pai existe
+	if req.ParentID != nil {
+		parentCategory, err := s.db.GetCategoryByID(*req.ParentID)
+		if err != nil {
+			return nil, fmt.Errorf("erro ao buscar categoria pai: %w", err)
+		}
+		if parentCategory == nil {
+			return nil, fmt.Errorf("categoria pai não encontrada")
+		}
+		if !parentCategory.IsActive {
+			return nil, fmt.Errorf("categoria pai está inativa")
+		}
+		// Subcategorias devem ter o mesmo tipo da categoria pai
+		if parentCategory.Type != req.Type {
+			return nil, fmt.Errorf("subcategoria deve ter o mesmo tipo da categoria pai")
+		}
+	}
+
+	category := structs.NewCategory(req)
+
+	if err := s.db.CreateCategory(category); err != nil {
+		return nil, fmt.Errorf("erro ao criar categoria: %w", err)
+	}
+
+	return &category, nil
+}
+
+// GetCategoryByID busca uma categoria pelo ID
+func (s *CategoryService) GetCategoryByID(id string) (*structs.Category, error) {
+	// Validar se o ID é um UUID válido
+	if !utils.IsValidUUID(id) {
+		return nil, fmt.Errorf("ID deve ser um UUID válido")
+	}
+
+	category, err := s.db.GetCategoryByID(id)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao buscar categoria: %w", err)
+	}
+	if category == nil {
+		return nil, fmt.Errorf("categoria não encontrada")
+	}
+	return category, nil
+}
+
+// GetAllCategories busca todas as categorias
+func (s *CategoryService) GetAllCategories() ([]structs.Category, error) {
+	categories, err := s.db.GetAllCategories()
+	if err != nil {
+		return nil, fmt.Errorf("erro ao buscar categorias: %w", err)
+	}
+	return categories, nil
+}
+
+// GetCategoriesByType busca categorias por tipo (receita ou despesa)
+func (s *CategoryService) GetCategoriesByType(categoryType structs.CategoryType) ([]structs.Category, error) {
+	categories, err := s.db.GetCategoriesByType(categoryType)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao buscar categorias por tipo: %w", err)
+	}
+	return categories, nil
+}
+
+// GetCategoriesWithSubcategories busca categorias principais com suas subcategorias
+func (s *CategoryService) GetCategoriesWithSubcategories(categoryType structs.CategoryType) ([]structs.CategoryWithSubcategories, error) {
+	// Buscar categorias principais (sem parent_id)
+	mainCategories, err := s.db.GetCategoriesByType(categoryType)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao buscar categorias principais: %w", err)
+	}
+
+	var result []structs.CategoryWithSubcategories
+	for _, mainCategory := range mainCategories {
+		if mainCategory.ParentID == nil { // Apenas categorias principais
+			subcategories, err := s.db.GetSubcategories(mainCategory.ID)
+			if err != nil {
+				return nil, fmt.Errorf("erro ao buscar subcategorias: %w", err)
+			}
+
+			categoryWithSubs := structs.CategoryWithSubcategories{
+				Category:      mainCategory,
+				Subcategories: subcategories,
+			}
+			result = append(result, categoryWithSubs)
+		}
+	}
+
+	return result, nil
+}
+
+// GetSubcategories busca as subcategorias de uma categoria pai
+func (s *CategoryService) GetSubcategories(parentID string) ([]structs.Category, error) {
+	// Validar se o parentID é um UUID válido
+	if !utils.IsValidUUID(parentID) {
+		return nil, fmt.Errorf("parentID deve ser um UUID válido")
+	}
+
+	// Verificar se a categoria pai existe
+	parentCategory, err := s.db.GetCategoryByID(parentID)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao buscar categoria pai: %w", err)
+	}
+	if parentCategory == nil {
+		return nil, fmt.Errorf("categoria pai não encontrada")
+	}
+
+	subcategories, err := s.db.GetSubcategories(parentID)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao buscar subcategorias: %w", err)
+	}
+
+	return subcategories, nil
+}
+
+// UpdateCategory atualiza uma categoria existente
+func (s *CategoryService) UpdateCategory(id string, req structs.UpdateCategoryRequest) (*structs.Category, error) {
+	// Validar se o ID é um UUID válido
+	if !utils.IsValidUUID(id) {
+		return nil, fmt.Errorf("ID deve ser um UUID válido")
+	}
+
+	// Verificar se a categoria existe
+	existingCategory, err := s.db.GetCategoryByID(id)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao buscar categoria: %w", err)
+	}
+	if existingCategory == nil {
+		return nil, fmt.Errorf("categoria não encontrada")
+	}
+
+	// Atualizar a categoria
+	if err := s.db.UpdateCategory(id, req); err != nil {
+		return nil, fmt.Errorf("erro ao atualizar categoria: %w", err)
+	}
+
+	// Buscar a categoria atualizada
+	updatedCategory, err := s.db.GetCategoryByID(id)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao buscar categoria atualizada: %w", err)
+	}
+
+	return updatedCategory, nil
+}
+
+// DeleteCategory remove uma categoria (soft delete)
+func (s *CategoryService) DeleteCategory(id string) error {
+	// Validar se o ID é um UUID válido
+	if !utils.IsValidUUID(id) {
+		return fmt.Errorf("ID deve ser um UUID válido")
+	}
+
+	// Verificar se a categoria existe
+	existingCategory, err := s.db.GetCategoryByID(id)
+	if err != nil {
+		return fmt.Errorf("erro ao buscar categoria: %w", err)
+	}
+	if existingCategory == nil {
+		return fmt.Errorf("categoria não encontrada")
+	}
+
+	// Buscar subcategorias ativas
+	subcategories, err := s.db.GetSubcategories(id)
+	if err != nil {
+		return fmt.Errorf("erro ao verificar subcategorias: %w", err)
+	}
+
+	// Excluir todas as subcategorias primeiro (soft delete)
+	for _, subcategory := range subcategories {
+		if err := s.db.DeleteCategory(subcategory.ID); err != nil {
+			return fmt.Errorf("erro ao excluir subcategoria %s: %w", subcategory.Name, err)
+		}
+	}
+
+	// Excluir a categoria pai
+	if err := s.db.DeleteCategory(id); err != nil {
+		return fmt.Errorf("erro ao excluir categoria: %w", err)
+	}
+
+	return nil
+}
+
+// HardDeleteCategory remove uma categoria permanentemente
+func (s *CategoryService) HardDeleteCategory(id string) error {
+	// Validar se o ID é um UUID válido
+	if !utils.IsValidUUID(id) {
+		return fmt.Errorf("ID deve ser um UUID válido")
+	}
+
+	// Verificar se a categoria existe
+	existingCategory, err := s.db.GetCategoryByID(id)
+	if err != nil {
+		return fmt.Errorf("erro ao buscar categoria: %w", err)
+	}
+	if existingCategory == nil {
+		return fmt.Errorf("categoria não encontrada")
+	}
+
+	// Buscar subcategorias (incluindo as deletadas para hard delete)
+	subcategories, err := s.db.GetSubcategoriesIncludingDeleted(id)
+	if err != nil {
+		return fmt.Errorf("erro ao verificar subcategorias: %w", err)
+	}
+
+	// Excluir permanentemente todas as subcategorias primeiro
+	for _, subcategory := range subcategories {
+		if err := s.db.HardDeleteCategory(subcategory.ID); err != nil {
+			return fmt.Errorf("erro ao excluir permanentemente subcategoria %s: %w", subcategory.Name, err)
+		}
+	}
+
+	// Excluir permanentemente a categoria pai
+	if err := s.db.HardDeleteCategory(id); err != nil {
+		return fmt.Errorf("erro ao excluir categoria permanentemente: %w", err)
+	}
+
+	return nil
+}
