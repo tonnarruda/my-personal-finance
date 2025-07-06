@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Category, CategoryWithSubcategories, CreateCategoryRequest, UpdateCategoryRequest } from '../types/category';
-import { categoryService } from '../services/api.ts';
-import CategoryList from '../components/CategoryList.tsx';
-import CategoryForm from '../components/CategoryForm.tsx';
+import { categoryService } from '../services/api';
+import CategoryList from '../components/CategoryList';
+import CategoryForm from '../components/CategoryForm';
 
 const CategoriesPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -77,8 +77,8 @@ const CategoriesPage: React.FC = () => {
     try {
       setError('');
       setSuccess('');
-      const message = await categoryService.deleteCategory(categoryToDelete.id);
       setCategoryToDelete(null);
+      const message = await categoryService.deleteCategory(categoryToDelete.id);
       setSuccess(message);
       await loadCategories();
       // Limpar mensagem de sucesso após 3 segundos
@@ -138,8 +138,14 @@ const CategoriesPage: React.FC = () => {
             <p className="mt-2 text-lg text-gray-600">Gerencie as categorias de suas transações</p>
           </div>
           <button
-            onClick={() => { setShowForm(true); setEditingCategory(undefined); }}
-            className="px-6 py-3 bg-blue-600 text-white text-lg font-semibold rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onClick={() => {
+              setShowForm(true);
+              setEditingCategory(undefined);
+            }}
+            className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150
+             bg-[#f1f3fe] text-[#6366f1] 
+             hover:bg-indigo-100 hover:text-indigo-800
+             focus:outline-none focus:ring-2 focus:ring-blue-700"
           >
             + Nova Categoria
           </button>

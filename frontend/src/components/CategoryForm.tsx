@@ -9,6 +9,43 @@ interface CategoryFormProps {
   isLoading?: boolean;
 }
 
+const typeOptions = [
+  {
+    value: 'income',
+    label: 'Receita',
+    icon: (
+      <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+    ),
+  },
+  {
+    value: 'expense',
+    label: 'Despesa',
+    icon: (
+      <svg className="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+    ),
+  },
+];
+
+const PREDEFINED_COLORS = [
+  // 4 verdes
+  '#22c55e', '#16a34a', '#4ade80', '#166534',
+  // 4 azuis
+  '#3b82f6', '#2563eb', '#60a5fa', '#1e40af',
+  // 4 vermelhos
+  '#ef4444', '#dc2626', '#f87171', '#991b1b',
+  // 4 amarelos
+  '#facc15', '#eab308', '#fde047', '#ca8a04',
+  // 4 roxos
+  '#a78bfa', '#8b5cf6', '#c4b5fd', '#6d28d9',
+  // 4 laranjas
+  '#fb923c', '#f97316', '#fdba74', '#c2410c',
+  // 3 cinzas
+  '#6b7280', '#9ca3af', '#d1d5db',
+  // 3 rosas
+  '#f472b6', '#db2777', '#f9a8d4'
+];
+
+
 const CategoryForm: React.FC<CategoryFormProps> = ({
   category,
   parentCategories = [],
@@ -42,47 +79,54 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-
     if (!formData.name.trim()) {
       newErrors.name = 'Nome é obrigatório';
     }
-
     if (!formData.color) {
       newErrors.color = 'Cor é obrigatória';
     }
-
-    if (!formData.icon) {
-      newErrors.icon = 'Ícone é obrigatório';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (validateForm()) {
       onSubmit(formData);
     }
   };
 
   const handleInputChange = (field: keyof CreateCategoryRequest, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'type') {
+      setFormData(prev => ({
+        ...prev,
+        type: value as CategoryType,
+        color: '#3B82F6',
+        parent_id: undefined
+      }));
+      if (errors[field]) {
+        setErrors(prev => ({ ...prev, [field]: '' }));
+      }
+      return;
+    }
+    if (field === 'parent_id') {
+      if (value) {
+        const parent = parentCategories.find(cat => cat.id === value);
+        if (parent) {
+          setFormData(prev => ({ ...prev, parent_id: value, color: parent.color }));
+        } else {
+          setFormData(prev => ({ ...prev, parent_id: value }));
+        }
+      } else {
+        setFormData(prev => ({ ...prev, parent_id: undefined, color: '#3B82F6'}));
+      }
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
-
-  const iconOptions = [
-    '🏠', '💰', '🍽️', '🚗', '🛒', '🎮', '📚', '🏥', '💊', '👕', '🎬', '✈️',
-    '🏖️', '🎵', '📱', '💻', '⚡', '💧', '🔥', '🌱', '🎨', '🏃', '🧘', '📺'
-  ];
-
-  const colorOptions = [
-    '#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899',
-    '#06B6D4', '#84CC16', '#F97316', '#6366F1', '#14B8A6', '#F43F5E'
-  ];
 
   const filteredParentCategories = parentCategories.filter(
     (cat) => cat.type === formData.type
@@ -90,67 +134,54 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
-      <div className="flex items-start justify-between mb-8">
+      <div className="mb-8">
         <h2 className="text-3xl font-bold text-gray-900">{category ? 'Editar Categoria' : 'Nova Categoria'}</h2>
       </div>
-      <div className="flex flex-col gap-6 mb-8 md:flex-row md:gap-4">
-        {/* Nome */}
-        <div className="flex-1 min-w-[180px]">
-          <label htmlFor="name" className="block text-base font-medium text-gray-700 mb-2">Nome</label>
-          <input
-            type="text"
-            id="name"
-            value={formData.name}
-            onChange={e => handleInputChange('name', e.target.value)}
-            className="w-full px-5 py-3 rounded-xl border border-gray-200 text-base placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            placeholder="Ex: Alimentação, Salário, etc."
-            required
-          />
+      {/* Seleção de tipo */}
+      <div className="mb-6">
+        <label className="block text-base font-medium text-gray-700 mb-2">Selecione o tipo</label>
+        <div className="flex gap-4">
+          {typeOptions.map(option => (
+            <button
+              type="button"
+              key={option.value}
+              onClick={() => handleInputChange('type', option.value as CategoryType)}
+              className={`flex-1 flex items-center justify-center px-8 py-4 rounded-xl border text-lg font-semibold transition-all
+                ${formData.type === option.value
+                  ? option.value === 'income'
+                    ? 'bg-green-50 border-green-200 text-green-700 ring-2 ring-green-200'
+                    : 'bg-red-50 border-red-400 text-red-600 ring-2 ring-red-200'
+                  : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}
+              `}
+            >
+              {option.icon}
+              {option.label}
+            </button>
+          ))}
         </div>
-        {/* Tipo */}
-        <div className="w-[160px] min-w-[120px]">
-          <label htmlFor="type" className="block text-base font-medium text-gray-700 mb-2">Tipo</label>
-          <select
-            id="type"
-            value={formData.type}
-            onChange={e => handleInputChange('type', e.target.value as CategoryType)}
-            className="w-full px-5 py-3 rounded-xl border border-gray-200 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
-          >
-            <option value="expense">Despesa</option>
-            <option value="income">Receita</option>
-          </select>
-        </div>
-        {/* Cor */}
-        <div className="flex items-end gap-2 w-[120px] min-w-[100px]">
-          <div className="flex flex-col w-full">
-            <label htmlFor="color" className="block text-base font-medium text-gray-700 mb-2">Cor</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                id="color"
-                value={formData.color}
-                onChange={e => handleInputChange('color', e.target.value)}
-                className="w-10 h-10 p-0 border-0 bg-transparent cursor-pointer rounded-xl"
-                style={{ background: 'none' }}
-              />
-              <input
-                type="text"
-                value={formData.color}
-                onChange={e => handleInputChange('color', e.target.value)}
-                className="w-20 px-3 py-3 rounded-xl border border-gray-200 text-base focus:outline-none focus:ring-2 focus:ring-blue-200"
-                maxLength={7}
-              />
-            </div>
-          </div>
-        </div>
-        {/* Subcategoria */}
-        <div className="w-[220px] min-w-[160px]">
+      </div>
+      {/* Nome */}
+      <div className="mb-6">
+        <label htmlFor="name" className="block text-base font-medium text-gray-700 mb-2">Nome</label>
+        <input
+          type="text"
+          id="name"
+          value={formData.name}
+          onChange={e => handleInputChange('name', e.target.value)}
+          className="w-full px-5 py-4 rounded-xl border border-gray-200 text-base placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+          placeholder="Ex: Alimentação, Salário, etc."
+          required
+        />
+      </div>
+      {/* Subcategoria e Cor */}
+      <div className="flex flex-col gap-4 mb-10">
+        <div className="w-full">
           <label htmlFor="parent_id" className="block text-base font-medium text-gray-700 mb-2">Subcategoria de</label>
           <select
             id="parent_id"
             value={formData.parent_id || ''}
             onChange={e => handleInputChange('parent_id', e.target.value)}
-            className="w-full px-5 py-3 rounded-xl border border-gray-200 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+            className="w-full px-5 py-4 rounded-xl border border-gray-200 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
           >
             <option value="">Nenhuma</option>
             {filteredParentCategories.map((parent) => (
@@ -160,12 +191,38 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
             ))}
           </select>
         </div>
+        <div className="w-full">
+          <label htmlFor="color" className="block text-base font-medium text-gray-700 mb-2">Cor</label>
+          <div className={`flex flex-col gap-2 ${formData.parent_id ? 'opacity-50 pointer-events-none select-none' : ''}`}>
+            <div className="grid grid-cols-10 gap-5 mb-2">
+              {PREDEFINED_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all focus:outline-none ${
+                    formData.color === color ? 'ring-2 ring-gray-400 border-gray-400' : 'border-transparent'
+                  }`}
+                  style={{ backgroundColor: color, cursor: formData.parent_id ? 'not-allowed' : 'pointer' }}
+                  onClick={() => !formData.parent_id && handleInputChange('color', color)}
+                  aria-label={`Selecionar cor ${color}`}
+                  disabled={!!formData.parent_id}
+                >
+                  {formData.color === color && (
+                    <svg className="w-6 h-6" fill="none" stroke="black" strokeWidth="3" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="flex justify-end mt-2">
+      <div className="mt-8">
         <button
           type="submit"
           disabled={isLoading}
-          className="px-8 py-3 bg-blue-600 text-white text-lg font-semibold rounded-xl shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full px-8 py-4 bg-[#f1f3fe] text-[#6366f1]  text-xl font-bold rounded-xl shadow hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {category ? 'Salvar' : 'Adicionar'}
         </button>
