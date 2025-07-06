@@ -7,30 +7,6 @@ import (
 	"github.com/tonnarruda/my-personal-finance/structs"
 )
 
-// createAccountTable cria a tabela de contas bancárias
-func (d *Database) createAccountTable() error {
-	query := `
-	CREATE TABLE IF NOT EXISTS accounts (
-		id VARCHAR(36) PRIMARY KEY,
-		currency VARCHAR(10) NOT NULL, -- Moeda (ex: BRL, USD)
-		name VARCHAR(255) NOT NULL, -- Nome da Conta
-		color VARCHAR(7), -- Cor da conta
-		is_active BOOLEAN DEFAULT TRUE, -- Conta ativa ou inativa
-		created_at TIMESTAMP NOT NULL,
-		updated_at TIMESTAMP NOT NULL,
-		deleted_at TIMESTAMP NULL
-	);
-	
-	CREATE INDEX IF NOT EXISTS idx_accounts_type ON accounts(type);
-	CREATE INDEX IF NOT EXISTS idx_accounts_currency ON accounts(currency);
-	CREATE INDEX IF NOT EXISTS idx_accounts_name ON accounts(name);
-	CREATE INDEX IF NOT EXISTS idx_accounts_created_at ON accounts(created_at);
-	`
-
-	_, err := d.db.Exec(query)
-	return err
-}
-
 // CreateAccount insere uma nova conta no banco
 func (d *Database) CreateAccount(account structs.Account) error {
 	query := `

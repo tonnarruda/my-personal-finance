@@ -80,45 +80,12 @@ func NewDatabase(config DatabaseConfig) (*Database, error) {
 	}
 
 	database := &Database{db: db}
-	if err := database.createTables(); err != nil {
-		return nil, fmt.Errorf("failed to create tables: %w", err)
-	}
-
 	return database, nil
 }
 
 // Close fecha a conexão com o banco de dados
 func (d *Database) Close() error {
 	return d.db.Close()
-}
-
-// createTables cria as tabelas necessárias
-func (d *Database) createTables() error {
-	query := `
-	CREATE TABLE IF NOT EXISTS categories (
-		id VARCHAR(36) PRIMARY KEY,
-		name VARCHAR(255) NOT NULL,
-		description TEXT,
-		type VARCHAR(10) NOT NULL CHECK (type IN ('income', 'expense')),
-		color VARCHAR(7),
-		icon VARCHAR(50),
-		parent_id VARCHAR(36),
-		is_active BOOLEAN DEFAULT TRUE,
-		created_at TIMESTAMP NOT NULL,
-		updated_at TIMESTAMP NOT NULL,
-		deleted_at TIMESTAMP NULL,
-		CONSTRAINT fk_parent_category FOREIGN KEY (parent_id) REFERENCES categories (id) ON DELETE CASCADE
-	);
-
-	CREATE INDEX IF NOT EXISTS idx_categories_parent_id ON categories(parent_id);
-	CREATE INDEX IF NOT EXISTS idx_categories_type ON categories(type);
-	CREATE INDEX IF NOT EXISTS idx_categories_is_active ON categories(is_active);
-	CREATE INDEX IF NOT EXISTS idx_categories_created_at ON categories(created_at);
-	CREATE INDEX IF NOT EXISTS idx_categories_deleted_at ON categories(deleted_at);
-	`
-
-	_, err := d.db.Exec(query)
-	return err
 }
 
 // CreateCategory insere uma nova categoria no banco
