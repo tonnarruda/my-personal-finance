@@ -1,5 +1,7 @@
--- +migrate Up
+-- 0001-migration.up.sql
 
+
+-- Criação da Tabela de Categoria
 CREATE TABLE IF NOT EXISTS categories (
     id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -21,6 +23,9 @@ CREATE INDEX IF NOT EXISTS idx_categories_is_active ON categories(is_active);
 CREATE INDEX IF NOT EXISTS idx_categories_created_at ON categories(created_at);
 CREATE INDEX IF NOT EXISTS idx_categories_deleted_at ON categories(deleted_at);
 
+
+
+-- Criação da Tabela de Contas
 CREATE TABLE IF NOT EXISTS accounts (
     id VARCHAR(36) PRIMARY KEY,
     currency VARCHAR(10) NOT NULL,
