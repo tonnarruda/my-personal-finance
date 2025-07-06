@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Category, CreateCategoryRequest, UpdateCategoryRequest, CategoryType } from '../types/category';
+import Select from 'react-select';
 
 interface CategoryFormProps {
   category?: Category;
@@ -177,19 +178,49 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
       <div className="flex flex-col gap-4 mb-10">
         <div className="w-full">
           <label htmlFor="parent_id" className="block text-base font-medium text-gray-700 mb-2">Subcategoria de</label>
-          <select
-            id="parent_id"
-            value={formData.parent_id || ''}
-            onChange={e => handleInputChange('parent_id', e.target.value)}
-            className="w-full px-5 py-4 rounded-xl border border-gray-200 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
-          >
-            <option value="">Nenhuma</option>
-            {filteredParentCategories.map((parent) => (
-              <option key={parent.id} value={parent.id}>
-                {parent.name}
-              </option>
-            ))}
-          </select>
+          {/* Dropdown customizado com react-select */}
+          <Select
+            className="mb-2"
+            classNamePrefix="custom-select"
+            options={[
+              { value: '', label: 'Nenhuma' },
+              ...filteredParentCategories.map(parent => ({ value: parent.id, label: parent.name }))
+            ]}
+            value={[
+              { value: '', label: 'Nenhuma' },
+              ...filteredParentCategories.map(parent => ({ value: parent.id, label: parent.name }))
+            ].find(opt => opt.value === (formData.parent_id || ''))}
+            onChange={option => handleInputChange('parent_id', option?.value || '')}
+            isSearchable={false}
+            styles={{
+              control: (base, state) => ({
+                ...base,
+                background: '#fff',
+                borderColor: state.isFocused ? '#6366f1' : '#e5e7eb',
+                boxShadow: state.isFocused ? '0 0 0 2px #6366f133' : undefined,
+                borderRadius: 12,
+                minHeight: 48,
+                fontSize: 16,
+              }),
+              option: (base, state) => ({
+                ...base,
+                background: state.isSelected
+                  ? '#f1f3fe'
+                  : state.isFocused
+                  ? '#f3f4f6'
+                  : '#fff',
+                color: '#111',
+                fontWeight: state.isSelected ? 600 : 400,
+                fontSize: 16,
+              }),
+              menu: base => ({
+                ...base,
+                borderRadius: 12,
+                boxShadow: '0 4px 24px 0 #0001',
+                marginTop: 4,
+              }),
+            }}
+          />
         </div>
         <div className="w-full">
           <label htmlFor="color" className="block text-base font-medium text-gray-700 mb-2">Cor</label>
