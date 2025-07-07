@@ -13,6 +13,7 @@ const CategoriesPage: React.FC = () => {
   const [editingCategory, setEditingCategory] = useState<Category | undefined>();
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [parentCategory, setParentCategory] = useState<Category | undefined>();
+  const [showInactive, setShowInactive] = useState(false);
 
   useEffect(() => {
     loadCategories();
@@ -129,16 +130,17 @@ const CategoriesPage: React.FC = () => {
     }
   };
 
-  const incomeCategories = categories.filter(cat => cat.type === 'income' && !cat.parent_id && cat.is_active);
-  const expenseCategories = categories.filter(cat => cat.type === 'expense' && !cat.parent_id && cat.is_active);
+  // Filtros de categorias
+  const incomeCategories = categories.filter(cat => cat.type === 'income' && !cat.parent_id && (showInactive || cat.is_active));
+  const expenseCategories = categories.filter(cat => cat.type === 'expense' && !cat.parent_id && (showInactive || cat.is_active));
 
   const incomeCategoriesWithSubs = incomeCategories.map(cat => ({
     ...cat,
-    subcategories: categories.filter(sub => sub.parent_id === cat.id)
+    subcategories: categories.filter(sub => sub.parent_id === cat.id && (showInactive || sub.is_active))
   }));
   const expenseCategoriesWithSubs = expenseCategories.map(cat => ({
     ...cat,
-    subcategories: categories.filter(sub => sub.parent_id === cat.id)
+    subcategories: categories.filter(sub => sub.parent_id === cat.id && (showInactive || sub.is_active))
   }));
 
   return (
@@ -149,18 +151,29 @@ const CategoriesPage: React.FC = () => {
             <h1 className="text-4xl font-extrabold text-gray-900">Categorias</h1>
             <p className="mt-2 text-lg text-gray-600">Gerencie as categorias de suas transações</p>
           </div>
-          <button
-            onClick={() => {
-              setShowForm(true);
-              setEditingCategory(undefined);
-            }}
-            className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150
-             bg-[#f1f3fe] text-[#6366f1] 
-             hover:bg-indigo-100 hover:text-indigo-800
-             focus:outline-none focus:ring-2 focus:ring-blue-700"
-          >
-            + Nova Categoria
-          </button>
+          <div className="flex items-center gap-6">
+            <label className="flex items-center cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={() => setShowInactive(v => !v)}
+                className="form-checkbox h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300"
+              />
+              <span className="ml-2 text-base text-gray-700">Exibir categorias inativas</span>
+            </label>
+            <button
+              onClick={() => {
+                setShowForm(true);
+                setEditingCategory(undefined);
+              }}
+              className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150
+               bg-[#f1f3fe] text-[#6366f1] 
+               hover:bg-indigo-100 hover:text-indigo-800
+               focus:outline-none focus:ring-2 focus:ring-blue-700"
+            >
+              + Nova Categoria
+            </button>
+          </div>
         </div>
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">

@@ -56,13 +56,14 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
   isLoading = false,
   parentCategory
 }) => {
-  const [formData, setFormData] = useState<CreateCategoryRequest>({
+  const [formData, setFormData] = useState<CreateCategoryRequest & { is_active?: boolean }>({
     name: '',
     description: '',
     type: parentCategory ? parentCategory.type : 'expense',
     color: parentCategory ? parentCategory.color : '#3B82F6',
     icon: '📁',
-    parent_id: parentCategory ? parentCategory.id : undefined
+    parent_id: parentCategory ? parentCategory.id : undefined,
+    is_active: category ? category.is_active : true
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -76,14 +77,16 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
         type: category.type,
         color: category.color,
         icon: category.icon,
-        parent_id: category.parent_id
+        parent_id: category.parent_id,
+        is_active: category.is_active
       });
     } else if (parentCategory) {
       setFormData(prev => ({
         ...prev,
         type: parentCategory.type,
         color: parentCategory.color,
-        parent_id: parentCategory.id
+        parent_id: parentCategory.id,
+        is_active: true
       }));
     }
   }, [category, parentCategory]);
@@ -201,6 +204,25 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
           <span className="text-red-600 text-sm mt-1 block">Campo obrigatório</span>
         )}
       </div>
+      {/* Switch de ativação só na edição */}
+      {category && (
+        <div className="mb-6 flex items-center gap-4">
+          <label htmlFor="is_active" className="block text-base font-medium text-gray-700">Status:</label>
+          <button
+            type="button"
+            onClick={() => setFormData(prev => ({ ...prev, is_active: !prev.is_active }))}
+            className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors focus:outline-none ${formData.is_active ? 'bg-green-400' : 'bg-gray-300'}`}
+            id="is_active"
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${formData.is_active ? 'translate-x-6' : 'translate-x-1'}`}
+            />
+          </button>
+          <span className={`ml-2 text-sm font-medium ${formData.is_active ? 'text-green-700' : 'text-gray-500'}`}>
+            {formData.is_active ? 'Categoria ativa' : 'Categoria inativa'}
+          </span>
+        </div>
+      )}
       {/* Subcategoria e Cor */}
       <div className="flex flex-col gap-4 mb-10">
         <div className="w-full">
