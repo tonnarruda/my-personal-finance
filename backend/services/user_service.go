@@ -2,27 +2,32 @@ package services
 
 import (
 	"errors"
-	"sync"
-
-	"github.com/tonnarruda/my-personal-finance/structs"
 
 	"github.com/google/uuid"
+	"github.com/tonnarruda/my-personal-finance/database"
+	"github.com/tonnarruda/my-personal-finance/structs"
 	"golang.org/x/crypto/bcrypt"
 )
 
-var (
-	users      = make(map[string]*structs.User) // email -> User
-	usersMutex sync.RWMutex
-)
+type UserService struct {
+	DB *database.Database
+}
 
-// CriarUsuario cria um novo usuário se o email não existir e senha for válida
-func CriarUsuario(nome, email, senha string) (*structs.User, error) {
+func NewUserService(db *database.Database) *UserService {
+	return &UserService{DB: db}
+}
+
+// CriarUsuario cria um novo usuário no banco de dados
+func (s *UserService) CriarUsuario(nome, email, senha string) (*structs.User, error) {
 	if len(senha) < 8 {
 		return nil, errors.New("a senha deve ter no mínimo 8 caracteres")
 	}
-	usersMutex.Lock()
-	defer usersMutex.Unlock()
-	if _, exists := users[email]; exists {
+	// Verifica se já existe usuário com o email
+	existing, err := s.DB.GetUserByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
 		return nil, errors.New("email já cadastrado")
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(senha), bcrypt.DefaultCost)
@@ -35,16 +40,20 @@ func CriarUsuario(nome, email, senha string) (*structs.User, error) {
 		Email:     email,
 		SenhaHash: string(hash),
 	}
-	users[email] = user
+	err = s.DB.CreateUser(user)
+	if err != nil {
+		return nil, err
+	}
 	return user, nil
 }
 
-// AutenticarUsuario verifica email e senha
-func AutenticarUsuario(email, senha string) (*structs.User, error) {
-	usersMutex.RLock()
-	user, exists := users[email]
-	usersMutex.RUnlock()
-	if !exists {
+// AutenticarUsuario verifica email e senha no banco de dados
+func (s *UserService) AutenticarUsuario(email, senha string) (*structs.User, error) {
+	user, err := s.DB.GetUserByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
 		return nil, errors.New("usuário não encontrado")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.SenhaHash), []byte(senha)); err != nil {

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { logout } from '../services/auth';
 
 const menuItems = [
   { label: 'Dashboard', to: '/dashboard' },
@@ -11,6 +12,24 @@ const menuItems = [
 
 const Header: React.FC = () => {
   const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const avatarRef = useRef<HTMLSpanElement>(null);
+
+  // Fecha o menu ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (avatarRef.current && !avatarRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
+
   return (
     <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -44,8 +63,23 @@ const Header: React.FC = () => {
             <button className="w-11 h-11 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition" title="Notificações">
               <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
             </button>
-            <span className="w-11 h-11 rounded-full bg-orange-100 flex items-center justify-center">
+            <span
+              ref={avatarRef}
+              className="relative w-11 h-11 rounded-full bg-orange-100 flex items-center justify-center cursor-pointer"
+              onClick={() => setMenuOpen((open) => !open)}
+              title="Conta"
+            >
               <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="avatar" className="w-10 h-10 rounded-full object-cover" />
+              {menuOpen && (
+                <div className="absolute right-0 top-14 bg-white border border-gray-200 rounded-xl shadow-lg py-2 w-40 z-50 animate-fade-in">
+                  <button
+                    onClick={logout}
+                    className="w-full text-left px-5 py-2 text-gray-700 hover:bg-gray-100 rounded-xl text-base font-medium transition-colors"
+                  >
+                    Logoff
+                  </button>
+                </div>
+              )}
             </span>
           </div>
         </div>

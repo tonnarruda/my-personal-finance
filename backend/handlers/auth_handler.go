@@ -18,13 +18,21 @@ type LoginRequest struct {
 	Senha string `json:"senha" binding:"required"`
 }
 
-func SignupHandler(c *gin.Context) {
+type AuthHandler struct {
+	UserService *services.UserService
+}
+
+func NewAuthHandler(userService *services.UserService) *AuthHandler {
+	return &AuthHandler{UserService: userService}
+}
+
+func (h *AuthHandler) SignupHandler(c *gin.Context) {
 	var req SignupRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"erro": "dados inválidos", "detalhe": err.Error()})
 		return
 	}
-	user, err := services.CriarUsuario(req.Nome, req.Email, req.Senha)
+	user, err := h.UserService.CriarUsuario(req.Nome, req.Email, req.Senha)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"erro": err.Error()})
 		return
@@ -36,13 +44,13 @@ func SignupHandler(c *gin.Context) {
 	})
 }
 
-func LoginHandler(c *gin.Context) {
+func (h *AuthHandler) LoginHandler(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"erro": "dados inválidos", "detalhe": err.Error()})
 		return
 	}
-	user, err := services.AutenticarUsuario(req.Email, req.Senha)
+	user, err := h.UserService.AutenticarUsuario(req.Email, req.Senha)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"erro": err.Error()})
 		return

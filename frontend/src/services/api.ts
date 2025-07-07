@@ -95,4 +95,16 @@ export const categoryService = {
   },
 };
 
+// Função para login
+export async function login(email: string, senha: string) {
+  const response = await api.post('/login', { email, senha });
+  return response.data;
+}
+
+// Função para signup
+export async function signup(nome: string, email: string, senha: string) {
+  const response = await api.post('/signup', { nome, email, senha });
+  return response.data;
+}
+
 export default api; 
