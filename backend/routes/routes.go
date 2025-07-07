@@ -30,31 +30,13 @@ func SetupRoutes(categoryHandler *handlers.CategoryHandler) *gin.Engine {
 			c.Status(204)
 		})
 
-		// Criar nova categoria
 		categories.POST("", categoryHandler.CreateCategory)
-
-		// Buscar todas as categorias
 		categories.GET("", categoryHandler.GetAllCategories)
-
-		// Buscar categorias por tipo
 		categories.GET("/by-type", categoryHandler.GetCategoriesByType)
-
-		// Buscar categorias com subcategorias
-		categories.GET("/with-subcategories", categoryHandler.GetCategoriesWithSubcategories)
-
-		// Buscar categoria por ID
 		categories.GET("/:id", categoryHandler.GetCategoryByID)
-
-		// Buscar subcategorias de uma categoria pai (ajustado para evitar conflito)
 		categories.GET("/:id/subcategories", categoryHandler.GetSubcategories)
-
-		// Atualizar categoria
 		categories.PUT("/:id", categoryHandler.UpdateCategory)
-
-		// Remover categoria (soft delete)
 		categories.DELETE("/:id", categoryHandler.DeleteCategory)
-
-		// Remover categoria permanentemente
 		categories.DELETE("/:id/permanent", categoryHandler.HardDeleteCategory)
 	}
 

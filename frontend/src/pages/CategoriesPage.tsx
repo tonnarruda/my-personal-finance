@@ -12,6 +12,7 @@ const CategoriesPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | undefined>();
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  const [parentCategory, setParentCategory] = useState<Category | undefined>();
 
   useEffect(() => {
     loadCategories();
@@ -100,20 +101,31 @@ const CategoriesPage: React.FC = () => {
 
   const handleAddSubcategory = (parentCategory: Category) => {
     setEditingCategory(undefined);
+    setParentCategory(parentCategory);
     setShowForm(true);
-    // O formulário pode ser adaptado para subcategoria se desejar
   };
 
   const handleCancelForm = () => {
     setShowForm(false);
     setEditingCategory(undefined);
+    setParentCategory(undefined);
   };
 
   const handleSubmit = (data: CreateCategoryRequest | UpdateCategoryRequest) => {
     if (editingCategory) {
       handleUpdateCategory(data as UpdateCategoryRequest);
     } else {
-      handleCreateCategory(data as CreateCategoryRequest);
+      let submitData = data as CreateCategoryRequest;
+      if (parentCategory) {
+        submitData = {
+          ...submitData,
+          parent_id: parentCategory.id,
+          type: parentCategory.type,
+          color: parentCategory.color,
+        };
+      }
+      handleCreateCategory(submitData);
+      setParentCategory(undefined);
     }
   };
 
@@ -201,6 +213,7 @@ const CategoriesPage: React.FC = () => {
                 onSubmit={handleSubmit}
                 onCancel={handleCancelForm}
                 isLoading={isLoading}
+                parentCategory={parentCategory}
               />
             </div>
           </div>
