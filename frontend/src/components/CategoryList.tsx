@@ -38,14 +38,19 @@ const CategoryList: React.FC<CategoryListProps> = ({
         ${isSubcategory
           ? 'ml-10 bg-gray-50 py-2 px-4 min-h-[36px]'
           : 'py-4 px-6 min-h-[56px]'}
-      `}
+        ${!category.is_active ? 'opacity-50 cursor-default pointer-events-auto' : ''}`}
     >
       <span
         className={`inline-block mr-4 ${isSubcategory ? 'w-5 h-5' : 'w-7 h-7'} rounded-full border border-gray-200`}
         style={{ backgroundColor: category.color }}
       />
       <div className="flex-1 min-w-0">
-        <div className="font-semibold text-gray-900 text-base truncate">{category.name}</div>
+        <div className="font-semibold text-gray-900 text-base truncate flex items-center gap-2">
+          {category.name}
+          <span className="flex items-center gap-1 ml-2">
+            <span className={`text-xs ${category.is_active ? 'text-green-700' : 'text-gray-500'}`}>{category.is_active ? '' : 'Inativa'}</span>
+          </span>
+        </div>
       </div>
       <div className="flex items-center gap-2 ml-4">
         {!isSubcategory && (

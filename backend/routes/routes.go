@@ -36,6 +36,7 @@ func SetupRoutes(categoryHandler *handlers.CategoryHandler) *gin.Engine {
 		categories.GET("/:id", categoryHandler.GetCategoryByID)
 		categories.GET("/:id/subcategories", categoryHandler.GetSubcategories)
 		categories.PUT("/:id", categoryHandler.UpdateCategory)
+		categories.PATCH("/:id/color", categoryHandler.UpdateCategoryColor)
 		categories.DELETE("/:id", categoryHandler.DeleteCategory)
 		categories.DELETE("/:id/permanent", categoryHandler.HardDeleteCategory)
 	}

@@ -284,3 +284,45 @@ func (h *CategoryHandler) HardDeleteCategory(c *gin.Context) {
 		"message": "Categoria removida permanentemente",
 	})
 }
+
+// UpdateCategoryColor atualiza apenas a cor de uma categoria e suas subcategorias
+func (h *CategoryHandler) UpdateCategoryColor(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "ID da categoria é obrigatório",
+		})
+		return
+	}
+
+	// Validar se o ID é um UUID válido
+	if !utils.IsValidUUID(id) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "ID deve ser um UUID válido",
+		})
+		return
+	}
+
+	var req struct {
+		Color string `json:"color" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Cor é obrigatória: " + err.Error(),
+		})
+		return
+	}
+
+	category, err := h.categoryService.UpdateCategoryColor(id, req.Color)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":  "Cor da categoria e subcategorias atualizada com sucesso",
+		"category": category,
+	})
+}
