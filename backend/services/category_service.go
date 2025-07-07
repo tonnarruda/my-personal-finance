@@ -68,28 +68,28 @@ func (s *CategoryService) GetCategoryByID(id string) (*structs.Category, error) 
 	return category, nil
 }
 
-// GetAllCategories busca todas as categorias
-func (s *CategoryService) GetAllCategories() ([]structs.Category, error) {
-	categories, err := s.db.GetAllCategories()
+// GetAllCategories busca todas as categorias do usuário (incluindo padrão)
+func (s *CategoryService) GetAllCategories(userID string) ([]structs.Category, error) {
+	categories, err := s.db.GetAllCategories(userID)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao buscar categorias: %w", err)
 	}
 	return categories, nil
 }
 
-// GetCategoriesByType busca categorias por tipo (receita ou despesa)
-func (s *CategoryService) GetCategoriesByType(categoryType structs.CategoryType) ([]structs.Category, error) {
-	categories, err := s.db.GetCategoriesByType(categoryType)
+// GetCategoriesByType busca categorias por tipo (receita ou despesa) do usuário (incluindo padrão)
+func (s *CategoryService) GetCategoriesByType(userID string, categoryType structs.CategoryType) ([]structs.Category, error) {
+	categories, err := s.db.GetCategoriesByType(userID, categoryType)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao buscar categorias por tipo: %w", err)
 	}
 	return categories, nil
 }
 
-// GetCategoriesWithSubcategories busca categorias principais com suas subcategorias
-func (s *CategoryService) GetCategoriesWithSubcategories(categoryType structs.CategoryType) ([]structs.CategoryWithSubcategories, error) {
+// GetCategoriesWithSubcategories busca categorias principais com suas subcategorias (incluindo padrão)
+func (s *CategoryService) GetCategoriesWithSubcategories(userID string, categoryType structs.CategoryType) ([]structs.CategoryWithSubcategories, error) {
 	// Buscar categorias principais (sem parent_id)
-	mainCategories, err := s.db.GetCategoriesByType(categoryType)
+	mainCategories, err := s.db.GetCategoriesByType(userID, categoryType)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao buscar categorias principais: %w", err)
 	}
@@ -97,7 +97,7 @@ func (s *CategoryService) GetCategoriesWithSubcategories(categoryType structs.Ca
 	var result []structs.CategoryWithSubcategories
 	for _, mainCategory := range mainCategories {
 		if mainCategory.ParentID == nil { // Apenas categorias principais
-			subcategories, err := s.db.GetSubcategories(mainCategory.ID)
+			subcategories, err := s.db.GetSubcategories(mainCategory.ID, userID)
 			if err != nil {
 				return nil, fmt.Errorf("erro ao buscar subcategorias: %w", err)
 			}
@@ -113,8 +113,8 @@ func (s *CategoryService) GetCategoriesWithSubcategories(categoryType structs.Ca
 	return result, nil
 }
 
-// GetSubcategories busca as subcategorias de uma categoria pai
-func (s *CategoryService) GetSubcategories(parentID string) ([]structs.Category, error) {
+// GetSubcategories busca as subcategorias de uma categoria pai (incluindo padrão)
+func (s *CategoryService) GetSubcategories(parentID string, userID string) ([]structs.Category, error) {
 	// Validar se o parentID é um UUID válido
 	if !utils.IsValidUUID(parentID) {
 		return nil, fmt.Errorf("parentID deve ser um UUID válido")
@@ -129,7 +129,7 @@ func (s *CategoryService) GetSubcategories(parentID string) ([]structs.Category,
 		return nil, fmt.Errorf("categoria pai não encontrada")
 	}
 
-	subcategories, err := s.db.GetSubcategories(parentID)
+	subcategories, err := s.db.GetSubcategories(parentID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao buscar subcategorias: %w", err)
 	}
@@ -161,7 +161,7 @@ func (s *CategoryService) UpdateCategory(id string, req structs.UpdateCategoryRe
 	// Se a categoria não tem parent_id (é uma categoria pai) e a cor foi alterada,
 	// atualizar a cor de todas as subcategorias
 	if existingCategory.ParentID == nil && req.Color != "" && req.Color != existingCategory.Color {
-		subcategories, err := s.db.GetSubcategories(id)
+		subcategories, err := s.db.GetSubcategories(id, req.UserID)
 		if err != nil {
 			return nil, fmt.Errorf("erro ao buscar subcategorias: %w", err)
 		}
@@ -192,7 +192,7 @@ func (s *CategoryService) UpdateCategory(id string, req structs.UpdateCategoryRe
 }
 
 // DeleteCategory remove uma categoria (soft delete)
-func (s *CategoryService) DeleteCategory(id string) error {
+func (s *CategoryService) DeleteCategory(id string, userID string) error {
 	// Validar se o ID é um UUID válido
 	if !utils.IsValidUUID(id) {
 		return fmt.Errorf("ID deve ser um UUID válido")
@@ -208,20 +208,20 @@ func (s *CategoryService) DeleteCategory(id string) error {
 	}
 
 	// Buscar subcategorias ativas
-	subcategories, err := s.db.GetSubcategories(id)
+	subcategories, err := s.db.GetSubcategories(id, userID)
 	if err != nil {
 		return fmt.Errorf("erro ao verificar subcategorias: %w", err)
 	}
 
 	// Excluir todas as subcategorias primeiro (soft delete)
 	for _, subcategory := range subcategories {
-		if err := s.db.DeleteCategory(subcategory.ID); err != nil {
+		if err := s.db.DeleteCategory(subcategory.ID, userID); err != nil {
 			return fmt.Errorf("erro ao excluir subcategoria %s: %w", subcategory.Name, err)
 		}
 	}
 
 	// Excluir a categoria pai
-	if err := s.db.DeleteCategory(id); err != nil {
+	if err := s.db.DeleteCategory(id, userID); err != nil {
 		return fmt.Errorf("erro ao excluir categoria: %w", err)
 	}
 
@@ -266,7 +266,7 @@ func (s *CategoryService) HardDeleteCategory(id string) error {
 }
 
 // UpdateCategoryColor atualiza apenas a cor de uma categoria e suas subcategorias
-func (s *CategoryService) UpdateCategoryColor(id string, color string) (*structs.Category, error) {
+func (s *CategoryService) UpdateCategoryColor(id string, color string, userID string) (*structs.Category, error) {
 	// Validar se o ID é um UUID válido
 	if !utils.IsValidUUID(id) {
 		return nil, fmt.Errorf("ID deve ser um UUID válido")
@@ -297,7 +297,7 @@ func (s *CategoryService) UpdateCategoryColor(id string, color string) (*structs
 
 	// Se a categoria não tem parent_id (é uma categoria pai), atualizar a cor de todas as subcategorias
 	if existingCategory.ParentID == nil {
-		subcategories, err := s.db.GetSubcategories(id)
+		subcategories, err := s.db.GetSubcategories(id, userID)
 		if err != nil {
 			return nil, fmt.Errorf("erro ao buscar subcategorias: %w", err)
 		}

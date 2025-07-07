@@ -22,6 +22,15 @@ func NewCategoryHandler(categoryService *services.CategoryService) *CategoryHand
 
 // CreateCategory cria uma nova categoria
 func (h *CategoryHandler) CreateCategory(c *gin.Context) {
+	// Obter user_id do query parameter
+	userID := c.Query("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "user_id é obrigatório",
+		})
+		return
+	}
+
 	var req structs.CreateCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -29,6 +38,9 @@ func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 		})
 		return
 	}
+
+	// Definir o user_id no request
+	req.UserID = userID
 
 	category, err := h.categoryService.CreateCategory(req)
 	if err != nil {
@@ -77,7 +89,16 @@ func (h *CategoryHandler) GetCategoryByID(c *gin.Context) {
 
 // GetAllCategories busca todas as categorias
 func (h *CategoryHandler) GetAllCategories(c *gin.Context) {
-	categories, err := h.categoryService.GetAllCategories()
+	// Obter user_id do corpo da requisição
+	userID := c.Query("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "user_id é obrigatório",
+		})
+		return
+	}
+
+	categories, err := h.categoryService.GetAllCategories(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -100,6 +121,15 @@ func (h *CategoryHandler) GetCategoriesByType(c *gin.Context) {
 		return
 	}
 
+	// Obter user_id do corpo da requisição
+	userID := c.Query("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "user_id é obrigatório",
+		})
+		return
+	}
+
 	// Validar o tipo da categoria
 	if categoryType != string(structs.CategoryTypeIncome) && categoryType != string(structs.CategoryTypeExpense) {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -108,7 +138,7 @@ func (h *CategoryHandler) GetCategoriesByType(c *gin.Context) {
 		return
 	}
 
-	categories, err := h.categoryService.GetCategoriesByType(structs.CategoryType(categoryType))
+	categories, err := h.categoryService.GetCategoriesByType(userID, structs.CategoryType(categoryType))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -131,6 +161,15 @@ func (h *CategoryHandler) GetCategoriesWithSubcategories(c *gin.Context) {
 		return
 	}
 
+	// Obter user_id do corpo da requisição
+	userID := c.Query("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "user_id é obrigatório",
+		})
+		return
+	}
+
 	// Validar o tipo da categoria
 	if categoryType != string(structs.CategoryTypeIncome) && categoryType != string(structs.CategoryTypeExpense) {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -139,7 +178,7 @@ func (h *CategoryHandler) GetCategoriesWithSubcategories(c *gin.Context) {
 		return
 	}
 
-	categories, err := h.categoryService.GetCategoriesWithSubcategories(structs.CategoryType(categoryType))
+	categories, err := h.categoryService.GetCategoriesWithSubcategories(userID, structs.CategoryType(categoryType))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -162,6 +201,15 @@ func (h *CategoryHandler) GetSubcategories(c *gin.Context) {
 		return
 	}
 
+	// Obter user_id do corpo da requisição
+	userID := c.Query("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "user_id é obrigatório",
+		})
+		return
+	}
+
 	// Validar se o id é um UUID válido
 	if !utils.IsValidUUID(id) {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -170,7 +218,7 @@ func (h *CategoryHandler) GetSubcategories(c *gin.Context) {
 		return
 	}
 
-	subcategories, err := h.categoryService.GetSubcategories(id)
+	subcategories, err := h.categoryService.GetSubcategories(id, userID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": err.Error(),
@@ -233,6 +281,15 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 		return
 	}
 
+	// Obter user_id do corpo da requisição
+	userID := c.Query("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "user_id é obrigatório",
+		})
+		return
+	}
+
 	// Validar se o ID é um UUID válido
 	if !utils.IsValidUUID(id) {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -241,7 +298,7 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 		return
 	}
 
-	err := h.categoryService.DeleteCategory(id)
+	err := h.categoryService.DeleteCategory(id, userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
@@ -295,6 +352,15 @@ func (h *CategoryHandler) UpdateCategoryColor(c *gin.Context) {
 		return
 	}
 
+	// Obter user_id do corpo da requisição
+	userID := c.Query("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "user_id é obrigatório",
+		})
+		return
+	}
+
 	// Validar se o ID é um UUID válido
 	if !utils.IsValidUUID(id) {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -313,7 +379,7 @@ func (h *CategoryHandler) UpdateCategoryColor(c *gin.Context) {
 		return
 	}
 
-	category, err := h.categoryService.UpdateCategoryColor(id, req.Color)
+	category, err := h.categoryService.UpdateCategoryColor(id, req.Color, userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),

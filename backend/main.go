@@ -61,14 +61,16 @@ func main() {
 
 	// Inicializar serviços
 	categoryService := services.NewCategoryService(db)
+	accountService := services.NewAccountService(db)
 	userService := services.NewUserService(db)
 
 	// Inicializar handlers
 	categoryHandler := handlers.NewCategoryHandler(categoryService)
+	accountHandler := handlers.NewAccountHandler(accountService)
 	authHandler := handlers.NewAuthHandler(userService)
 
 	// Configurar rotas
-	router := routes.SetupRoutes(categoryHandler, authHandler)
+	router := routes.SetupRoutes(categoryHandler, accountHandler, authHandler)
 
 	// Configurar porta do servidor
 	port := getEnv("PORT", "8080")
@@ -77,6 +79,7 @@ func main() {
 	log.Printf("📊 Banco de dados: %s:%s/%s", dbConfig.Host, dbConfig.Port, dbConfig.DBName)
 	log.Printf("🔗 Health check: http://localhost:%s/health", port)
 	log.Printf("📋 API de categorias: http://localhost:%s/api/categories", port)
+	log.Printf("💰 API de contas: http://localhost:%s/api/accounts", port)
 
 	// Iniciar servidor
 	if err := router.Run(":" + port); err != nil {

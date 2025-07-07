@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getUser } from './auth';
 import { 
   Category, 
   CategoryWithSubcategories, 
@@ -7,8 +8,23 @@ import {
   CategoryType,
   ApiResponse 
 } from '../types/category';
+import {
+  Account,
+  CreateAccountRequest as CreateAccountRequestType,
+  UpdateAccountRequest as UpdateAccountRequestType,
+  ApiResponse as AccountApiResponse
+} from '../types/account';
 
 const API_BASE_URL = 'http://localhost:8080/api';
+
+// Função para obter o user_id do usuário logado
+const getUserId = (): string => {
+  const user = getUser();
+  if (!user || !user.id) {
+    throw new Error('Usuário não autenticado');
+  }
+  return user.id;
+};
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -43,55 +59,101 @@ api.interceptors.response.use(
 export const categoryService = {
   // Criar categoria
   createCategory: async (data: CreateCategoryRequest): Promise<string> => {
-    const response = await api.post<ApiResponse<void>>('/categories', data);
+    const userId = getUserId();
+    const response = await api.post<ApiResponse<void>>(`/categories?user_id=${userId}`, data);
     return response.data.message || 'Categoria criada com sucesso';
   },
 
   // Buscar todas as categorias
   getAllCategories: async (): Promise<Category[]> => {
-    const response = await api.get<ApiResponse<Category[]>>('/categories');
+    const userId = getUserId();
+    const response = await api.get<ApiResponse<Category[]>>(`/categories?user_id=${userId}`);
     return response.data.categories || [];
   },
 
   // Buscar categorias por tipo
   getCategoriesByType: async (type: CategoryType): Promise<Category[]> => {
-    const response = await api.get<ApiResponse<Category[]>>(`/categories/by-type?type=${type}`);
+    const userId = getUserId();
+    const response = await api.get<ApiResponse<Category[]>>(`/categories/by-type?type=${type}&user_id=${userId}`);
     return response.data.categories || [];
   },
 
   // Buscar categorias com subcategorias
   getCategoriesWithSubcategories: async (type: CategoryType): Promise<CategoryWithSubcategories[]> => {
-    const response = await api.get<ApiResponse<CategoryWithSubcategories[]>>(`/categories/with-subcategories?type=${type}`);
+    const userId = getUserId();
+    const response = await api.get<ApiResponse<CategoryWithSubcategories[]>>(`/categories/with-subcategories?type=${type}&user_id=${userId}`);
     return (response.data.categories || []) as CategoryWithSubcategories[];
   },
 
   // Buscar categoria por ID
   getCategoryById: async (id: string): Promise<Category> => {
-    const response = await api.get<ApiResponse<Category>>(`/categories/${id}`);
+    const userId = getUserId();
+    const response = await api.get<ApiResponse<Category>>(`/categories/${id}?user_id=${userId}`);
     return response.data.category!;
   },
 
   // Buscar subcategorias
   getSubcategories: async (parentId: string): Promise<Category[]> => {
-    const response = await api.get<ApiResponse<Category[]>>(`/categories/${parentId}/subcategories`);
+    const userId = getUserId();
+    const response = await api.get<ApiResponse<Category[]>>(`/categories/${parentId}/subcategories?user_id=${userId}`);
     return response.data.subcategories || [];
   },
 
   // Atualizar categoria
   updateCategory: async (id: string, data: UpdateCategoryRequest): Promise<string> => {
-    const response = await api.put<ApiResponse<void>>(`/categories/${id}`, data);
+    const userId = getUserId();
+    const response = await api.put<ApiResponse<void>>(`/categories/${id}?user_id=${userId}`, data);
     return response.data.message || 'Categoria atualizada com sucesso';
   },
 
   // Deletar categoria (soft delete)
   deleteCategory: async (id: string): Promise<string> => {
-    const response = await api.delete<ApiResponse<void>>(`/categories/${id}`);
+    const userId = getUserId();
+    const response = await api.delete<ApiResponse<void>>(`/categories/${id}?user_id=${userId}`);
     return response.data.message || 'Categoria excluída com sucesso';
   },
 
   // Deletar categoria permanentemente
   hardDeleteCategory: async (id: string): Promise<void> => {
-    await api.delete(`/categories/${id}/permanent`);
+    const userId = getUserId();
+    await api.delete(`/categories/${id}/permanent?user_id=${userId}`);
+  },
+};
+
+export const accountService = {
+  // Criar conta
+  createAccount: async (data: CreateAccountRequestType): Promise<string> => {
+    const userId = getUserId();
+    const response = await api.post<AccountApiResponse>(`/accounts?user_id=${userId}`, data);
+    return response.data.message || 'Conta criada com sucesso';
+  },
+
+  // Buscar todas as contas
+  getAllAccounts: async (): Promise<Account[]> => {
+    const userId = getUserId();
+    const response = await api.get<AccountApiResponse>(`/accounts?user_id=${userId}`);
+    return response.data.accounts || [];
+  },
+
+  // Buscar conta por ID
+  getAccountById: async (id: string): Promise<Account> => {
+    const userId = getUserId();
+    const response = await api.get<AccountApiResponse>(`/accounts/${id}?user_id=${userId}`);
+    return response.data.account!;
+  },
+
+  // Atualizar conta
+  updateAccount: async (id: string, data: UpdateAccountRequestType): Promise<string> => {
+    const userId = getUserId();
+    const response = await api.put<AccountApiResponse>(`/accounts/${id}?user_id=${userId}`, data);
+    return response.data.message || 'Conta atualizada com sucesso';
+  },
+
+  // Deletar conta (soft delete)
+  deleteAccount: async (id: string): Promise<string> => {
+    const userId = getUserId();
+    const response = await api.delete<AccountApiResponse>(`/accounts/${id}?user_id=${userId}`);
+    return response.data.message || 'Conta excluída com sucesso';
   },
 };
 

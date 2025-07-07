@@ -10,8 +10,8 @@ import (
 // CreateAccount insere uma nova conta no banco
 func (d *Database) CreateAccount(account structs.Account) error {
 	query := `
-	INSERT INTO accounts (id, currency, name, color, is_active, created_at, updated_at, deleted_at)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	INSERT INTO accounts (id, currency, name, color, is_active, created_at, updated_at, deleted_at, user_id)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 	_, err := d.db.Exec(query,
 		account.ID,
@@ -22,15 +22,16 @@ func (d *Database) CreateAccount(account structs.Account) error {
 		account.CreatedAt,
 		account.UpdatedAt,
 		account.DeletedAt,
+		account.UserID,
 	)
 	return err
 }
 
 // GetAccountByID busca uma conta pelo ID
-func (d *Database) GetAccountByID(id string) (*structs.Account, error) {
-	query := `SELECT id, currency, name, color, is_active, created_at, updated_at, deleted_at FROM accounts WHERE id = $1`
+func (d *Database) GetAccountByID(id string, userID string) (*structs.Account, error) {
+	query := `SELECT id, currency, name, color, is_active, created_at, updated_at, deleted_at, user_id FROM accounts WHERE id = $1 AND user_id = $2`
 	var account structs.Account
-	err := d.db.QueryRow(query, id).Scan(
+	err := d.db.QueryRow(query, id, userID).Scan(
 		&account.ID,
 		&account.Currency,
 		&account.Name,
@@ -39,6 +40,7 @@ func (d *Database) GetAccountByID(id string) (*structs.Account, error) {
 		&account.CreatedAt,
 		&account.UpdatedAt,
 		&account.DeletedAt,
+		&account.UserID,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -49,10 +51,10 @@ func (d *Database) GetAccountByID(id string) (*structs.Account, error) {
 	return &account, nil
 }
 
-// GetAllAccounts busca todas as contas
-func (d *Database) GetAllAccounts() ([]structs.Account, error) {
-	query := `SELECT id, currency, name, color, is_active, created_at, updated_at, deleted_at FROM accounts WHERE deleted_at IS NULL ORDER BY LOWER(name)`
-	rows, err := d.db.Query(query)
+// GetAllAccounts busca todas as contas do usuário
+func (d *Database) GetAllAccounts(userID string) ([]structs.Account, error) {
+	query := `SELECT id, currency, name, color, is_active, created_at, updated_at, deleted_at, user_id FROM accounts WHERE deleted_at IS NULL AND user_id = $1 ORDER BY LOWER(name)`
+	rows, err := d.db.Query(query, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -69,6 +71,7 @@ func (d *Database) GetAllAccounts() ([]structs.Account, error) {
 			&account.CreatedAt,
 			&account.UpdatedAt,
 			&account.DeletedAt,
+			&account.UserID,
 		)
 		if err != nil {
 			return nil, err
@@ -83,7 +86,7 @@ func (d *Database) UpdateAccount(id string, req structs.UpdateAccountRequest) er
 	query := `
 	UPDATE accounts 
 	SET currency = $1, name = $2, color = $3, is_active = $4, updated_at = $5
-	WHERE id = $6
+	WHERE id = $6 AND user_id = $7
 	`
 	_, err := d.db.Exec(query,
 		req.Currency,
@@ -92,13 +95,14 @@ func (d *Database) UpdateAccount(id string, req structs.UpdateAccountRequest) er
 		req.IsActive,
 		time.Now(),
 		id,
+		req.UserID,
 	)
 	return err
 }
 
 // DeleteAccount faz soft delete de uma conta
-func (d *Database) DeleteAccount(id string) error {
-	query := `UPDATE accounts SET deleted_at = $1, updated_at = $1 WHERE id = $2`
-	_, err := d.db.Exec(query, time.Now(), id)
+func (d *Database) DeleteAccount(id string, userID string) error {
+	query := `UPDATE accounts SET deleted_at = $1, updated_at = $1 WHERE id = $2 AND user_id = $3`
+	_, err := d.db.Exec(query, time.Now(), id, userID)
 	return err
 }
