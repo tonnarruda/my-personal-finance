@@ -42,9 +42,9 @@ api.interceptors.response.use(
 
 export const categoryService = {
   // Criar categoria
-  createCategory: async (data: CreateCategoryRequest): Promise<Category> => {
-    const response = await api.post<ApiResponse<Category>>('/categories', data);
-    return response.data.category!;
+  createCategory: async (data: CreateCategoryRequest): Promise<string> => {
+    const response = await api.post<ApiResponse<void>>('/categories', data);
+    return response.data.message || 'Categoria criada com sucesso';
   },
 
   // Buscar todas as categorias
@@ -78,9 +78,9 @@ export const categoryService = {
   },
 
   // Atualizar categoria
-  updateCategory: async (id: string, data: UpdateCategoryRequest): Promise<Category> => {
-    const response = await api.put<ApiResponse<Category>>(`/categories/${id}`, data);
-    return response.data.category!;
+  updateCategory: async (id: string, data: UpdateCategoryRequest): Promise<string> => {
+    const response = await api.put<ApiResponse<void>>(`/categories/${id}`, data);
+    return response.data.message || 'Categoria atualizada com sucesso';
   },
 
   // Deletar categoria (soft delete)

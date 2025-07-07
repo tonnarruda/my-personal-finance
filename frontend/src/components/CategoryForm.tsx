@@ -178,9 +178,9 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
                     ? 'bg-green-50 border-green-200 text-green-700 ring-2 ring-green-200'
                     : 'bg-red-50 border-red-400 text-red-600 ring-2 ring-red-200'
                   : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}
-                ${parentCategory ? 'opacity-50 pointer-events-none select-none' : ''}
+                ${parentCategory || category ? 'opacity-50 pointer-events-none select-none' : ''}
               `}
-              disabled={!!parentCategory}
+              disabled={!!parentCategory || !!category}
             >
               {option.icon}
               {option.label}

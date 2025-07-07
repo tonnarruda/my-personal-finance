@@ -46,10 +46,14 @@ const CategoriesPage: React.FC = () => {
   const handleCreateCategory = async (data: CreateCategoryRequest) => {
     try {
       setError('');
-      await categoryService.createCategory(data);
+      setSuccess('');
+      const message = await categoryService.createCategory(data);
+      setSuccess(message);
       setShowForm(false);
       setEditingCategory(undefined);
       await loadCategories();
+      // Limpar mensagem de sucesso após 3 segundos
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erro ao criar categoria');
       console.error('Erro ao criar categoria:', err);
@@ -60,10 +64,14 @@ const CategoriesPage: React.FC = () => {
     if (!editingCategory) return;
     try {
       setError('');
-      await categoryService.updateCategory(editingCategory.id, data);
+      setSuccess('');
+      const message = await categoryService.updateCategory(editingCategory.id, data);
+      setSuccess(message);
       setShowForm(false);
       setEditingCategory(undefined);
       await loadCategories();
+      // Limpar mensagem de sucesso após 3 segundos
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Erro ao atualizar categoria');
       console.error('Erro ao atualizar categoria:', err);
