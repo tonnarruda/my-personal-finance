@@ -28,6 +28,7 @@ type Category struct {
 	CreatedAt   time.Time    `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time    `json:"updated_at" db:"updated_at"`
 	DeletedAt   *time.Time   `json:"deleted_at,omitempty" db:"deleted_at"`
+	UserID      string       `json:"user_id" db:"user_id"`
 }
 
 // CategoryWithSubcategories representa uma categoria com suas subcategorias
@@ -44,6 +45,7 @@ type CreateCategoryRequest struct {
 	Color       string       `json:"color"`
 	Icon        string       `json:"icon"`
 	ParentID    *string      `json:"parent_id"`
+	UserID      string       `json:"user_id"`
 }
 
 // UpdateCategoryRequest representa a requisição para atualizar uma categoria
@@ -53,6 +55,7 @@ type UpdateCategoryRequest struct {
 	Color       string `json:"color"`
 	Icon        string `json:"icon"`
 	IsActive    *bool  `json:"is_active"`
+	UserID      string `json:"user_id" binding:"required"`
 }
 
 // NewCategory cria uma nova instância de Category
@@ -69,6 +72,7 @@ func NewCategory(req CreateCategoryRequest) Category {
 		IsActive:    true,
 		CreatedAt:   now,
 		UpdatedAt:   now,
+		UserID:      req.UserID,
 	}
 }
 
