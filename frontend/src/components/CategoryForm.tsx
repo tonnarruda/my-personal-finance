@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Category, CreateCategoryRequest, UpdateCategoryRequest, CategoryType } from '../types/category';
 import Select from 'react-select';
 
@@ -8,6 +8,7 @@ interface CategoryFormProps {
   onSubmit: (data: CreateCategoryRequest | UpdateCategoryRequest) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  parentCategory?: Category;
 }
 
 const typeOptions = [
@@ -52,18 +53,20 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
   parentCategories = [],
   onSubmit,
   onCancel,
-  isLoading = false
+  isLoading = false,
+  parentCategory
 }) => {
   const [formData, setFormData] = useState<CreateCategoryRequest>({
     name: '',
     description: '',
-    type: 'expense',
-    color: '#3B82F6',
+    type: parentCategory ? parentCategory.type : 'expense',
+    color: parentCategory ? parentCategory.color : '#3B82F6',
     icon: '📁',
-    parent_id: undefined
+    parent_id: parentCategory ? parentCategory.id : undefined
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (category) {
@@ -75,8 +78,27 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
         icon: category.icon,
         parent_id: category.parent_id
       });
+    } else if (parentCategory) {
+      setFormData(prev => ({
+        ...prev,
+        type: parentCategory.type,
+        color: parentCategory.color,
+        parent_id: parentCategory.id
+      }));
     }
-  }, [category]);
+  }, [category, parentCategory]);
+
+  useEffect(() => {
+    if (nameInputRef.current) {
+      nameInputRef.current.focus();
+    }
+  }, [category, parentCategory]);
+
+  useEffect(() => {
+    if (errors.name && nameInputRef.current) {
+      nameInputRef.current.focus();
+    }
+  }, [errors.name]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -136,7 +158,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
   return (
     <form onSubmit={handleSubmit} className="w-full">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">{category ? 'Editar Categoria' : 'Nova Categoria'}</h2>
+        <h2 className="text-3xl font-bold text-gray-900">{category ? 'Editar Categoria' : parentCategory ? `Nova Subcategoria de ${parentCategory.name}` : 'Nova Categoria'}</h2>
       </div>
       {/* Seleção de tipo */}
       <div className="mb-6">
@@ -153,7 +175,9 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
                     ? 'bg-green-50 border-green-200 text-green-700 ring-2 ring-green-200'
                     : 'bg-red-50 border-red-400 text-red-600 ring-2 ring-red-200'
                   : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}
+                ${parentCategory ? 'opacity-50 pointer-events-none select-none' : ''}
               `}
+              disabled={!!parentCategory}
             >
               {option.icon}
               {option.label}
@@ -169,62 +193,44 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
           id="name"
           value={formData.name}
           onChange={e => handleInputChange('name', e.target.value)}
-          className="w-full px-5 py-4 rounded-xl border border-gray-200 text-base placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+          className={`w-full px-5 py-4 rounded-xl border text-base placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-200 ${errors.name ? 'border-red-500' : 'border-gray-200'}`}
           placeholder="Ex: Alimentação, Salário, etc."
-          required
+          ref={nameInputRef}
         />
+        {errors.name && (
+          <span className="text-red-600 text-sm mt-1 block">Campo obrigatório</span>
+        )}
       </div>
       {/* Subcategoria e Cor */}
       <div className="flex flex-col gap-4 mb-10">
         <div className="w-full">
           <label htmlFor="parent_id" className="block text-base font-medium text-gray-700 mb-2">Subcategoria de</label>
-          {/* Dropdown customizado com react-select */}
-          <Select
-            className="mb-2"
-            classNamePrefix="custom-select"
-            options={[
-              { value: '', label: 'Nenhuma' },
-              ...filteredParentCategories.map(parent => ({ value: parent.id, label: parent.name }))
-            ]}
-            value={[
-              { value: '', label: 'Nenhuma' },
-              ...filteredParentCategories.map(parent => ({ value: parent.id, label: parent.name }))
-            ].find(opt => opt.value === (formData.parent_id || ''))}
-            onChange={option => handleInputChange('parent_id', option?.value || '')}
-            isSearchable={false}
-            styles={{
-              control: (base, state) => ({
-                ...base,
-                background: '#fff',
-                borderColor: state.isFocused ? '#6366f1' : '#e5e7eb',
-                boxShadow: state.isFocused ? '0 0 0 2px #6366f133' : undefined,
-                borderRadius: 12,
-                minHeight: 48,
-                fontSize: 16,
-              }),
-              option: (base, state) => ({
-                ...base,
-                background: state.isSelected
-                  ? '#f1f3fe'
-                  : state.isFocused
-                  ? '#f3f4f6'
-                  : '#fff',
-                color: '#111',
-                fontWeight: state.isSelected ? 600 : 400,
-                fontSize: 16,
-              }),
-              menu: base => ({
-                ...base,
-                borderRadius: 12,
-                boxShadow: '0 4px 24px 0 #0001',
-                marginTop: 4,
-              }),
-            }}
-          />
+          {parentCategory ? (
+            <input
+              type="text"
+              value={parentCategory.name}
+              disabled
+              className="w-full px-5 py-4 rounded-xl border border-gray-200 text-base bg-gray-100 text-gray-500"
+            />
+          ) : (
+            <select
+              id="parent_id"
+              value={formData.parent_id || ''}
+              onChange={e => handleInputChange('parent_id', e.target.value)}
+              className="w-full px-5 py-4 rounded-xl border border-gray-200 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+            >
+              <option value="">Nenhuma</option>
+              {filteredParentCategories.map((parent) => (
+                <option key={parent.id} value={parent.id}>
+                  {parent.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="w-full">
           <label htmlFor="color" className="block text-base font-medium text-gray-700 mb-2">Cor</label>
-          <div className={`flex flex-col gap-2 ${formData.parent_id ? 'opacity-50 pointer-events-none select-none' : ''}`}>
+          <div className={`flex flex-col gap-2 ${formData.parent_id || parentCategory ? 'opacity-50 pointer-events-none select-none' : ''}`}>
             <div className="grid grid-cols-10 gap-5 mb-2">
               {PREDEFINED_COLORS.map((color) => (
                 <button
@@ -233,10 +239,10 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
                   className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all focus:outline-none ${
                     formData.color === color ? 'ring-2 ring-gray-400 border-gray-400' : 'border-transparent'
                   }`}
-                  style={{ backgroundColor: color, cursor: formData.parent_id ? 'not-allowed' : 'pointer' }}
-                  onClick={() => !formData.parent_id && handleInputChange('color', color)}
+                  style={{ backgroundColor: color, cursor: formData.parent_id || parentCategory ? 'not-allowed' : 'pointer' }}
+                  onClick={() => !(formData.parent_id || parentCategory) && handleInputChange('color', color)}
                   aria-label={`Selecionar cor ${color}`}
-                  disabled={!!formData.parent_id}
+                  disabled={!!formData.parent_id || !!parentCategory}
                 >
                   {formData.color === color && (
                     <svg className="w-6 h-6" fill="none" stroke="black" strokeWidth="3" viewBox="0 0 24 24">
@@ -255,7 +261,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
           disabled={isLoading}
           className="w-full px-8 py-4 bg-[#f1f3fe] text-[#6366f1]  text-xl font-bold rounded-xl shadow hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {category ? 'Salvar' : 'Adicionar'}
+          {category ? 'Salvar' : parentCategory ? 'Adicionar Subcategoria' : 'Adicionar'}
         </button>
       </div>
     </form>
