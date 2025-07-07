@@ -21,7 +21,7 @@ const api = axios.create({
 // Interceptor para logs de debug
 api.interceptors.request.use(
   (config) => {
-    console.log('API Request:', config.method?.toUpperCase(), config.url);
+    //console.log('API Request:', config.method?.toUpperCase(), config.url);
     return config;
   },
   (error) => {
@@ -31,7 +31,7 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => {
-    console.log('API Response:', response.status, response.data);
+    //console.log('API Response:', response.status, response.data);
     return response;
   },
   (error) => {
@@ -94,5 +94,17 @@ export const categoryService = {
     await api.delete(`/categories/${id}/permanent`);
   },
 };
+
+// Função para login
+export async function login(email: string, senha: string) {
+  const response = await api.post('/login', { email, senha });
+  return response.data;
+}
+
+// Função para signup
+export async function signup(nome: string, email: string, senha: string) {
+  const response = await api.post('/signup', { nome, email, senha });
+  return response.data;
+}
 
 export default api; 
