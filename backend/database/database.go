@@ -23,8 +23,49 @@ type DatabaseConfig struct {
 	SSLMode  string
 }
 
+// ensureDatabaseExists verifica se o banco de dados existe e o cria se necessário
+func ensureDatabaseExists(config DatabaseConfig) error {
+	// Conectar ao banco postgres (banco padrão)
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=postgres sslmode=%s",
+		config.Host, config.Port, config.User, config.Password, config.SSLMode)
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		return fmt.Errorf("failed to connect to postgres database: %w", err)
+	}
+	defer db.Close()
+
+	// Verificar se o banco de dados existe
+	var exists int
+	query := `SELECT 1 FROM pg_database WHERE datname = $1`
+	err = db.QueryRow(query, config.DBName).Scan(&exists)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Banco não existe, vamos criá-lo
+			createQuery := fmt.Sprintf("CREATE DATABASE %s", config.DBName)
+			_, err = db.Exec(createQuery)
+			if err != nil {
+				return fmt.Errorf("failed to create database %s: %w", config.DBName, err)
+			}
+			fmt.Printf("✅ Banco de dados '%s' criado com sucesso!\n", config.DBName)
+		} else {
+			return fmt.Errorf("failed to check if database exists: %w", err)
+		}
+	} else {
+		fmt.Printf("✅ Banco de dados '%s' já existe\n", config.DBName)
+	}
+
+	return nil
+}
+
 // NewDatabase cria uma nova instância do banco de dados PostgreSQL
 func NewDatabase(config DatabaseConfig) (*Database, error) {
+	// Verificar e criar o banco de dados se necessário
+	if err := ensureDatabaseExists(config); err != nil {
+		return nil, err
+	}
+
 	// Construir string de conexão PostgreSQL
 	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		config.Host, config.Port, config.User, config.Password, config.DBName, config.SSLMode)
@@ -39,45 +80,12 @@ func NewDatabase(config DatabaseConfig) (*Database, error) {
 	}
 
 	database := &Database{db: db}
-	if err := database.createTables(); err != nil {
-		return nil, fmt.Errorf("failed to create tables: %w", err)
-	}
-
 	return database, nil
 }
 
 // Close fecha a conexão com o banco de dados
 func (d *Database) Close() error {
 	return d.db.Close()
-}
-
-// createTables cria as tabelas necessárias
-func (d *Database) createTables() error {
-	query := `
-	CREATE TABLE IF NOT EXISTS categories (
-		id VARCHAR(36) PRIMARY KEY,
-		name VARCHAR(255) NOT NULL,
-		description TEXT,
-		type VARCHAR(10) NOT NULL CHECK (type IN ('income', 'expense')),
-		color VARCHAR(7),
-		icon VARCHAR(50),
-		parent_id VARCHAR(36),
-		is_active BOOLEAN DEFAULT TRUE,
-		created_at TIMESTAMP NOT NULL,
-		updated_at TIMESTAMP NOT NULL,
-		deleted_at TIMESTAMP NULL,
-		CONSTRAINT fk_parent_category FOREIGN KEY (parent_id) REFERENCES categories (id) ON DELETE CASCADE
-	);
-	
-	CREATE INDEX IF NOT EXISTS idx_categories_parent_id ON categories(parent_id);
-	CREATE INDEX IF NOT EXISTS idx_categories_type ON categories(type);
-	CREATE INDEX IF NOT EXISTS idx_categories_is_active ON categories(is_active);
-	CREATE INDEX IF NOT EXISTS idx_categories_created_at ON categories(created_at);
-	CREATE INDEX IF NOT EXISTS idx_categories_deleted_at ON categories(deleted_at);
-	`
-
-	_, err := d.db.Exec(query)
-	return err
 }
 
 // CreateCategory insere uma nova categoria no banco
@@ -314,4 +322,8 @@ func (d *Database) HardDeleteCategory(id string) error {
 	query := `DELETE FROM categories WHERE id = $1`
 	_, err := d.db.Exec(query, id)
 	return err
+}
+
+func (d *Database) GetDB() *sql.DB {
+	return d.db
 }
