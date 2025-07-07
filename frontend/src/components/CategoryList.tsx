@@ -48,6 +48,17 @@ const CategoryList: React.FC<CategoryListProps> = ({
         <div className="font-semibold text-gray-900 text-base truncate">{category.name}</div>
       </div>
       <div className="flex items-center gap-2 ml-4">
+        {!isSubcategory && (
+          <button
+            onClick={() => onAddSubcategory(category)}
+            className="p-2 text-green-500 hover:text-green-700"
+            title="Adicionar subcategoria"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+        )}
         <button
           onClick={() => onEdit(category)}
           className="p-2 text-blue-500 hover:text-blue-700"
