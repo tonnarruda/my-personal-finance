@@ -41,6 +41,10 @@ func SetupRoutes(categoryHandler *handlers.CategoryHandler) *gin.Engine {
 		categories.DELETE("/:id/permanent", categoryHandler.HardDeleteCategory)
 	}
 
+	// Rotas de autenticação
+	router.POST("/api/signup", handlers.SignupHandler)
+	router.POST("/api/login", handlers.LoginHandler)
+
 	// Rota de health check
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
