@@ -62,6 +62,7 @@ func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *hand
 	// Rotas de autenticação
 	router.POST("/api/signup", authHandler.SignupHandler)
 	router.POST("/api/login", authHandler.LoginHandler)
+	router.GET("/api/me", authHandler.GetMeHandler)
 
 	// Rota de health check
 	router.GET("/health", func(c *gin.Context) {

@@ -22,6 +22,7 @@ export interface UpdateAccountRequest {
   name?: string;
   color?: string;
   is_active?: boolean;
+  user_id?: string;
 }
 
 export interface ApiResponse<T = any> {

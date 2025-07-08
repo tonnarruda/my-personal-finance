@@ -61,3 +61,8 @@ func (s *UserService) AutenticarUsuario(email, senha string) (*structs.User, err
 	}
 	return user, nil
 }
+
+// GetUserByID busca um usuário pelo ID
+func (s *UserService) GetUserByID(id string) (*structs.User, error) {
+	return s.DB.GetUserByID(id)
+}
