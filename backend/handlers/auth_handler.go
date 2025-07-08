@@ -61,3 +61,22 @@ func (h *AuthHandler) LoginHandler(c *gin.Context) {
 		"email": user.Email,
 	})
 }
+
+// GetMeHandler retorna os dados do usuário autenticado
+func (h *AuthHandler) GetMeHandler(c *gin.Context) {
+	userID := c.Query("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id é obrigatório"})
+		return
+	}
+	user, err := h.UserService.GetUserByID(userID)
+	if err != nil || user == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Usuário não encontrado"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"id":    user.ID,
+		"nome":  user.Nome,
+		"email": user.Email,
+	})
+}

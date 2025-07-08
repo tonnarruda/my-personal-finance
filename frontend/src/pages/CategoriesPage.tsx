@@ -29,6 +29,15 @@ const CategoriesPage: React.FC = () => {
     return () => window.removeEventListener('keydown', handleEsc);
   }, [showForm, editingCategory]);
 
+  useEffect(() => {
+    if (!categoryToDelete) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') cancelDeleteCategory();
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [categoryToDelete]);
+
   const loadCategories = async () => {
     try {
       setIsLoading(true);

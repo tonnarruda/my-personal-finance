@@ -36,3 +36,24 @@ func (d *Database) GetUserByEmail(email string) (*structs.User, error) {
 	}
 	return &user, nil
 }
+
+// GetUserByID busca um usuário pelo ID
+func (d *Database) GetUserByID(id string) (*structs.User, error) {
+	query := `SELECT id, nome, email, senha_hash, created_at, updated_at FROM users WHERE id = $1`
+	var user structs.User
+	err := d.db.QueryRow(query, id).Scan(
+		&user.ID,
+		&user.Nome,
+		&user.Email,
+		&user.SenhaHash,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
