@@ -3,6 +3,7 @@ import { Category, CategoryWithSubcategories, CreateCategoryRequest, UpdateCateg
 import { categoryService } from '../services/api';
 import CategoryList from '../components/CategoryList';
 import CategoryForm from '../components/CategoryForm';
+import Layout from '../components/Layout';
 
 const CategoriesPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -17,6 +18,10 @@ const CategoriesPage: React.FC = () => {
 
   useEffect(() => {
     loadCategories();
+  }, []);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   // ESC para fechar o modal
@@ -161,7 +166,7 @@ const CategoriesPage: React.FC = () => {
   }));
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <Layout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -272,7 +277,7 @@ const CategoriesPage: React.FC = () => {
           </div>
         )}
       </div>
-    </div>
+    </Layout>
   );
 };
 

@@ -1,6 +1,5 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import Header from './components/Header';
 import DashboardPage from './pages/DashboardPage';
 import CategoriesPage from './pages/CategoriesPage';
 import TransactionsPage from './pages/TransactionsPage';
@@ -10,17 +9,6 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import { isAuthenticated } from './services/auth';
 import './App.css';
-
-function AppLayout({ children }: { children: React.ReactNode }) {
-  const location = useLocation();
-  const hideHeader = location.pathname === '/login' || location.pathname === '/signup';
-  return (
-    <>
-      {!hideHeader && <Header />}
-      {children}
-    </>
-  );
-}
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const [showMessage, setShowMessage] = React.useState(true);
@@ -51,19 +39,17 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
 function App() {
   return (
     <Router>
-      <AppLayout>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
-          <Route path="/transacoes" element={<PrivateRoute><TransactionsPage /></PrivateRoute>} />
-          <Route path="/relatorios" element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
-          <Route path="/contas" element={<PrivateRoute><AccountsPage /></PrivateRoute>} />
-          <Route path="/categorias" element={<PrivateRoute><CategoriesPage /></PrivateRoute>} />
-          {/* Redirecionar raiz para login */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </AppLayout>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
+        <Route path="/transacoes" element={<PrivateRoute><TransactionsPage /></PrivateRoute>} />
+        <Route path="/relatorios" element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
+        <Route path="/contas" element={<PrivateRoute><AccountsPage /></PrivateRoute>} />
+        <Route path="/categorias" element={<PrivateRoute><CategoriesPage /></PrivateRoute>} />
+        {/* Redirecionar raiz para login */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
+      </Routes>
     </Router>
   );
 }
