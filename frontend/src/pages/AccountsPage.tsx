@@ -3,6 +3,7 @@ import AccountForm, { AccountFormData } from '../components/AccountForm';
 import { accountService } from '../services/api';
 import { CreateAccountRequest, UpdateAccountRequest, Account } from '../types/account';
 import { getUser } from '../services/auth';
+import Layout from '../components/Layout';
 
 const AccountsPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
@@ -48,6 +49,10 @@ const AccountsPage: React.FC = () => {
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [deletingAccount]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   const handleAddAccount = () => {
     setEditingAccount(null);
@@ -137,7 +142,7 @@ const AccountsPage: React.FC = () => {
   const currencies = Object.keys(accountsByCurrency);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <Layout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -256,7 +261,7 @@ const AccountsPage: React.FC = () => {
           </div>
         )}
       </div>
-    </div>
+    </Layout>
   );
 };
 
