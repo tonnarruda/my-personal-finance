@@ -7,7 +7,7 @@ import (
 )
 
 // SetupRoutes configura todas as rotas da aplicação
-func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *handlers.AccountHandler, authHandler *handlers.AuthHandler, transactionHandler *handlers.TransactionHandler) *gin.Engine {
+func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *handlers.AccountHandler, authHandler *handlers.AuthHandler, transactionHandler *handlers.TransactionHandler, keepAliveHandler *handlers.KeepAliveHandler) *gin.Engine {
 	router := gin.Default()
 
 	// Middleware CORS robusto
@@ -85,6 +85,10 @@ func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *hand
 			"message": "My Finance API está funcionando!",
 		})
 	})
+
+	// Rotas de keep-alive
+	router.POST("/api/keep-alive-logs", keepAliveHandler.LogKeepAlive)
+	router.GET("/api/keep-alive-stats", keepAliveHandler.GetKeepAliveStats)
 
 	return router
 }

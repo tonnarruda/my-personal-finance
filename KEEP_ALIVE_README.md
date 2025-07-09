@@ -1,15 +1,25 @@
-# Keep-Alive Service
+# Keep-Alive Service (Go)
 
-Este serviço mantém o backend no Render "acordado" fazendo ping no health check a cada minuto.
+Este serviço mantém o backend no Render "acordado" fazendo ping no health check a cada minuto e enviando logs para o backend.
 
 ## Como usar
 
-### 1. Execução simples
+### 1. Execução simples (Go)
+```bash
+go run keep-alive.go
+```
+
+### 2. Com script shell (Go)
+```bash
+./start-keep-alive-go.sh
+```
+
+### 3. Execução simples (Node.js - legado)
 ```bash
 node keep-alive.js
 ```
 
-### 2. Com script shell
+### 4. Com script shell (Node.js - legado)
 ```bash
 ./start-keep-alive.sh
 ```
@@ -26,6 +36,8 @@ REACT_APP_API_BASE_URL=https://my-personal-finance.onrender.com/api
 - `REACT_APP_API_BASE_URL`: URL base da API (opcional)
   - Se não definida, usa: `https://my-personal-finance.onrender.com/api`
   - O script automaticamente substitui `/api` por `/health`
+- `ENVIRONMENT`: Ambiente de execução (opcional)
+  - Padrão: "production"
 
 ### Intervalo
 - Padrão: 60 segundos (1 minuto)
@@ -33,13 +45,14 @@ REACT_APP_API_BASE_URL=https://my-personal-finance.onrender.com/api
 
 ## Logs
 
-O script mostra logs detalhados:
+O script mostra logs detalhados e envia para o backend:
 ```
 🚀 Starting keep-alive service for https://my-personal-finance.onrender.com/health
 ⏰ Interval: 60 seconds
-📅 Started at: 2024-01-15T10:30:00.000Z
-[2024-01-15T10:30:00.000Z] Health check: 200 OK
-[2024-01-15T10:30:00.000Z] Response: My Finance API está funcionando!
+📅 Started at: 2024-01-15 10:30:00
+🌍 Environment: production
+[2024-01-15 10:30:00] ✅ Health check: 200 OK (0.15s)
+[2024-01-15 10:30:00] 📝 Log sent to backend successfully
 ```
 
 ## Parar o serviço
