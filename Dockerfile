@@ -5,8 +5,6 @@ WORKDIR /app
 
 # Copy go mod files from backend directory
 COPY backend/go.mod backend/go.sum ./
-
-# Download dependencies
 RUN go mod download
 
 # Copy source code from backend directory
@@ -25,8 +23,11 @@ WORKDIR /root/
 # Copy the binary from builder stage
 COPY --from=builder /app/main .
 
+# ✅ Copia a pasta migrations para o container final
+COPY --from=builder /app/migrations ./migrations
+
 # Expose port
 EXPOSE 8080
 
 # Run the application
-CMD ["./main"] 
+CMD ["./main"]
