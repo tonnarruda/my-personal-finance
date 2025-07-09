@@ -9,7 +9,7 @@ import (
 
 const (
 	BACKEND_URL = "https://my-personal-finance.onrender.com/health"
-	INTERVAL    = 5 * time.Second
+	INTERVAL    = 30 * time.Second
 )
 
 func getBackendURL() string {
