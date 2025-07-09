@@ -66,9 +66,6 @@ const TransactionsPage: React.FC = () => {
       setAccounts(Array.isArray(accs) ? accs : []);
       setTransactions(Array.isArray(txs) ? txs.map(normalizeTransaction) : []);
       setCategories(Array.isArray(cats) ? cats : []);
-      console.log('Accounts:', accs);
-      console.log('Transactions:', txs);
-      console.log('Categories:', cats);
     } catch (err) {
       setAccounts([]);
       setTransactions([]);
