@@ -41,6 +41,7 @@ const TransactionsPage: React.FC = () => {
     month: today.getMonth() + 1,
     year: today.getFullYear(),
   });
+  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -202,17 +203,24 @@ const TransactionsPage: React.FC = () => {
       setFeedback({ type: 'error', message: 'Erro ao salvar transação.' });
     }
   };
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta transação?')) {
-      try {
-        await transactionService.deleteTransaction(id);
-        setFeedback({ type: 'success', message: 'Transação excluída com sucesso!' });
-        fetchData();
-      } catch {
-        setFeedback({ type: 'error', message: 'Erro ao excluir transação.' });
-      }
+  const handleDelete = (id: string) => {
+    const tx = transactions.find(t => t.id === id);
+    if (tx) setTransactionToDelete(tx);
+  };
+
+  const confirmDeleteTransaction = async () => {
+    if (!transactionToDelete) return;
+    try {
+      await transactionService.deleteTransaction(transactionToDelete.id!);
+      setFeedback({ type: 'success', message: 'Transação excluída com sucesso!' });
+      setTransactionToDelete(null);
+      fetchData();
+    } catch {
+      setFeedback({ type: 'error', message: 'Erro ao excluir transação.' });
     }
   };
+
+  const cancelDeleteTransaction = () => setTransactionToDelete(null);
 
   // Função utilitária para parsear datas em formato ISO ou SQL
   function parseDateString(dateStr: string | undefined): Date | null {
@@ -427,11 +435,39 @@ const TransactionsPage: React.FC = () => {
             </button>
           ))}
         </div>
-        {/* Seletor de mês fixo */}
-        <div className="flex items-center justify-center gap-6 w-full mb-2">
-          <button className="text-2xl text-gray-400 hover:text-gray-600 transition" onClick={handlePrevMonth}>{'<'}</button>
-          <span className="text-xl font-bold text-gray-900">{monthNames[selectedMonthYear.month - 1]} {selectedMonthYear.year}</span>
-          <button className="text-2xl text-gray-400 hover:text-gray-600 transition" onClick={handleNextMonth}>{'>'}</button>
+        {/* Seletor de mês fixo - ainda mais elegante */}
+        <div className="flex items-center justify-center gap-4 w-full mb-2 select-none">
+          <button
+            className="p-2 rounded-full hover:bg-indigo-100 active:scale-90 transition group shadow-sm"
+            onClick={handlePrevMonth}
+            aria-label="Mês anterior"
+            title="Mês anterior"
+          >
+            <svg className="w-8 h-8 text-gray-400 group-hover:text-indigo-600 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <span
+            className="px-8 py-2 rounded-2xl bg-gradient-to-r from-indigo-50 via-white to-indigo-50 shadow-lg border border-indigo-100 text-2xl font-extrabold text-gray-900 tracking-wide transition-all duration-300"
+            style={{ minWidth: 180, textAlign: 'center', letterSpacing: '0.04em' }}
+          >
+            <span className="inline-flex items-center gap-2">
+              <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              {monthNames[selectedMonthYear.month - 1]} {selectedMonthYear.year}
+            </span>
+          </span>
+          <button
+            className="p-2 rounded-full hover:bg-indigo-100 active:scale-90 transition group shadow-sm"
+            onClick={handleNextMonth}
+            aria-label="Próximo mês"
+            title="Próximo mês"
+          >
+            <svg className="w-8 h-8 text-gray-400 group-hover:text-indigo-600 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
         </div>
       </div>
       {/* Espaço para não sobrepor o conteúdo */}
@@ -567,6 +603,29 @@ const TransactionsPage: React.FC = () => {
         {showForm && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
             <TransactionForm onSubmit={handleSubmitForm} onCancel={handleCloseForm} currency={selectedCurrency} {...(editingTransaction ? { ...editingTransaction } : {})} />
+          </div>
+        )}
+        {/* Modal de confirmação de exclusão de transação */}
+        {transactionToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
+              <h2 className="text-xl font-bold mb-4">Excluir transação</h2>
+              <p className="mb-6">Tem certeza que deseja excluir a transação <span className="font-semibold">{transactionToDelete.description}</span>?</p>
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={cancelDeleteTransaction}
+                  className="px-6 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDeleteTransaction}
+                  className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
+                >
+                  Excluir
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
