@@ -10,14 +10,15 @@ import (
 // CreateAccount insere uma nova conta no banco
 func (d *Database) CreateAccount(account structs.Account) error {
 	query := `
-	INSERT INTO accounts (id, currency, name, color, is_active, created_at, updated_at, deleted_at, user_id)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	INSERT INTO accounts (id, currency, name, color, type, is_active, created_at, updated_at, deleted_at, user_id)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 	_, err := d.db.Exec(query,
 		account.ID,
 		account.Currency,
 		account.Name,
 		account.Color,
+		account.Type,
 		account.IsActive,
 		account.CreatedAt,
 		account.UpdatedAt,
@@ -29,13 +30,14 @@ func (d *Database) CreateAccount(account structs.Account) error {
 
 // GetAccountByID busca uma conta pelo ID
 func (d *Database) GetAccountByID(id string, userID string) (*structs.Account, error) {
-	query := `SELECT id, currency, name, color, is_active, created_at, updated_at, deleted_at, user_id FROM accounts WHERE id = $1 AND user_id = $2`
+	query := `SELECT id, currency, name, color, type, is_active, created_at, updated_at, deleted_at, user_id FROM accounts WHERE id = $1 AND user_id = $2`
 	var account structs.Account
 	err := d.db.QueryRow(query, id, userID).Scan(
 		&account.ID,
 		&account.Currency,
 		&account.Name,
 		&account.Color,
+		&account.Type,
 		&account.IsActive,
 		&account.CreatedAt,
 		&account.UpdatedAt,
@@ -53,7 +55,7 @@ func (d *Database) GetAccountByID(id string, userID string) (*structs.Account, e
 
 // GetAllAccounts busca todas as contas do usuário
 func (d *Database) GetAllAccounts(userID string) ([]structs.Account, error) {
-	query := `SELECT id, currency, name, color, is_active, created_at, updated_at, deleted_at, user_id FROM accounts WHERE deleted_at IS NULL AND user_id = $1 ORDER BY LOWER(name)`
+	query := `SELECT id, currency, name, color, type, is_active, created_at, updated_at, deleted_at, user_id FROM accounts WHERE deleted_at IS NULL AND user_id = $1 ORDER BY LOWER(name)`
 	rows, err := d.db.Query(query, userID)
 	if err != nil {
 		return nil, err
@@ -67,6 +69,7 @@ func (d *Database) GetAllAccounts(userID string) ([]structs.Account, error) {
 			&account.Currency,
 			&account.Name,
 			&account.Color,
+			&account.Type,
 			&account.IsActive,
 			&account.CreatedAt,
 			&account.UpdatedAt,
@@ -85,13 +88,14 @@ func (d *Database) GetAllAccounts(userID string) ([]structs.Account, error) {
 func (d *Database) UpdateAccount(id string, req structs.UpdateAccountRequest) error {
 	query := `
 	UPDATE accounts 
-	SET currency = $1, name = $2, color = $3, is_active = $4, updated_at = $5
-	WHERE id = $6 AND user_id = $7
+	SET currency = $1, name = $2, color = $3, type = $4, is_active = $5, updated_at = $6
+	WHERE id = $7 AND user_id = $8
 	`
 	_, err := d.db.Exec(query,
 		req.Currency,
 		req.Name,
 		req.Color,
+		req.Type,
 		req.IsActive,
 		time.Now(),
 		id,

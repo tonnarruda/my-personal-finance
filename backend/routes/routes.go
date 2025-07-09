@@ -7,7 +7,7 @@ import (
 )
 
 // SetupRoutes configura todas as rotas da aplicação
-func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *handlers.AccountHandler, authHandler *handlers.AuthHandler) *gin.Engine {
+func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *handlers.AccountHandler, authHandler *handlers.AuthHandler, transactionHandler *handlers.TransactionHandler) *gin.Engine {
 	router := gin.Default()
 
 	// Middleware CORS robusto
@@ -55,8 +55,22 @@ func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *hand
 		accounts.POST("", accountHandler.CreateAccount)
 		accounts.GET("", accountHandler.GetAllAccounts)
 		accounts.GET("/:id", accountHandler.GetAccountByID)
+		accounts.GET("/:id/initial-transaction", accountHandler.GetInitialTransaction)
 		accounts.PUT("/:id", accountHandler.UpdateAccount)
 		accounts.DELETE("/:id", accountHandler.DeleteAccount)
+	}
+
+	// Grupo de rotas para transações
+	transactions := router.Group("/api/transactions")
+	{
+		transactions.OPTIONS("", func(c *gin.Context) { c.Status(204) })
+		transactions.OPTIONS(":id", func(c *gin.Context) { c.Status(204) })
+
+		transactions.POST("", transactionHandler.CreateTransaction)
+		transactions.GET("", transactionHandler.GetAllTransactions)
+		transactions.GET(":id", transactionHandler.GetTransactionByID)
+		transactions.PUT(":id", transactionHandler.UpdateTransaction)
+		transactions.DELETE(":id", transactionHandler.DeleteTransaction)
 	}
 
 	// Rotas de autenticação

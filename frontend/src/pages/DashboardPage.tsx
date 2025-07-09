@@ -1,33 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { getUser } from '../services/auth';
-import api, { accountService } from '../services/api';
+import api, { accountService, transactionService, categoryService } from '../services/api';
 import { Account } from '../types/account';
+import { Transaction } from '../types/transaction';
+import { Category } from '../types/category';
 import Layout from '../components/Layout';
 
 const DashboardPage: React.FC = () => {
   const [nome, setNome] = useState('');
   const user = getUser();
-  const receitaMes = 23000;
-  const despesaMes = 19500;
-  const resultadoMes = receitaMes - despesaMes;
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
   const [reloadFlag, setReloadFlag] = useState(0);
-  const yTicks = [0, 6000, 12000, 18000, 24000];
   const [selectedCurrency, setSelectedCurrency] = useState('BRL');
-
-  // MOCK: dados para despesas e receitas por categoria
-  const despesasPorCategoria = [
-    { label: 'Casa/Energia', value: 10000, percent: 49.37, color: '#facc15' },
-    { label: 'Transporte/Gasolina', value: 7076.28, percent: 34.94, color: '#f87171' },
-    { label: 'Cartão de Crédito', value: 3040.41, percent: 15.01, color: '#64748b' },
-    { label: 'Alimentação', value: 138, percent: 0.68, color: '#a78bfa' },
-  ];
-  const receitasPorCategoria = [
-    { label: 'Salário', value: 18000, percent: 78.26, color: '#4ade80' },
-    { label: 'Freelance', value: 3000, percent: 13.04, color: '#60a5fa' },
-    { label: 'Investimentos', value: 2000, percent: 8.70, color: '#facc15' },
-  ];
 
   // Atualizar dados mockados para serem por currency
   interface CategoriaData { label: string; value: number; percent: number; color: string; }
@@ -86,18 +74,29 @@ const DashboardPage: React.FC = () => {
   }, [user?.id]);
 
   useEffect(() => {
-    async function fetchAccounts() {
+    async function fetchAllData() {
       setLoadingAccounts(true);
+      setLoadingData(true);
       try {
-        const data = await accountService.getAllAccounts();
-        setAccounts(data.filter(acc => acc.is_active));
+        const [accountsData, transactionsData, categoriesIncome, categoriesExpense] = await Promise.all([
+          accountService.getAllAccounts(),
+          transactionService.getAllTransactions(),
+          categoryService.getCategoriesByType('income'),
+          categoryService.getCategoriesByType('expense'),
+        ]);
+        setAccounts(accountsData.filter(acc => acc.is_active));
+        setTransactions(transactionsData);
+        setCategories([...categoriesIncome, ...categoriesExpense]);
       } catch (err) {
         setAccounts([]);
+        setTransactions([]);
+        setCategories([]);
       } finally {
         setLoadingAccounts(false);
+        setLoadingData(false);
       }
     }
-    fetchAccounts();
+    fetchAllData();
   }, []);
 
   // Agrupa contas por currency
@@ -108,21 +107,73 @@ const DashboardPage: React.FC = () => {
   });
   const currencies = Object.keys(accountsByCurrency);
 
-  // MOCK: valores de saldo para cada conta e total
-  const mockBalances: Record<string, string> = accounts.reduce((acc, account, idx) => {
-    // Exemplo: valores diferentes para cada conta
-    acc[account.id] = idx === 0 ? 'R$ 3.193,84' : idx === 1 ? 'R$ 1.023,47' : 'R$ 0,00';
-    return acc;
-  }, {} as Record<string, string>);
-  const mockTotal = 'R$ 4.217,31';
+  // Filtra transações do mês atual e moeda selecionada
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+  const transactionsForCurrency = transactions.filter(tx => {
+    const txDate = new Date(tx.competence_date || tx.due_date);
+    const acc = accounts.find(a => a.id === tx.account_id);
+    return (
+      acc && acc.currency === selectedCurrency &&
+      txDate.getMonth() + 1 === currentMonth &&
+      txDate.getFullYear() === currentYear
+    );
+  });
 
+  // Calcula receitas, despesas e saldo do mês (apenas pagas, corrigindo para centavos)
+  const receitaMes = transactionsForCurrency.filter(tx => tx.type === 'income' && tx.is_paid).reduce((sum, tx) => sum + (tx.amount / 100), 0);
+  const despesaMes = transactionsForCurrency.filter(tx => tx.type === 'expense' && tx.is_paid).reduce((sum, tx) => sum + (tx.amount / 100), 0);
+  const resultadoMes = receitaMes - despesaMes;
+
+  // Calcule o valor máximo para o eixo Y do gráfico de barras
+  const maxBarValue = Math.max(receitaMes, despesaMes, 1);
+  const yMax = Math.ceil(maxBarValue / 1000) * 1000 || 1000;
+  const yTicks = Array.from({ length: 5 }, (_, i) => Math.round((yMax / 4) * i));
+
+  // Saldo atual acumulado de todas as transações pagas da moeda (corrigindo para centavos)
+  const saldoAtual = transactions
+    .filter(tx => {
+      const acc = accounts.find(a => a.id === tx.account_id);
+      return acc && acc.currency === selectedCurrency && tx.is_paid;
+    })
+    .reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount / 100 : -tx.amount / 100), 0);
+
+  // Agrupa receitas/despesas por categoria
+  function groupByCategory(type: 'income' | 'expense') {
+    const txs = transactionsForCurrency.filter(tx => tx.type === type && tx.is_paid);
+    const map: { [catId: string]: { label: string; value: number; color: string } } = {};
+    txs.forEach(tx => {
+      const cat = categories.find(c => c.id === tx.category_id);
+      if (!cat) return;
+      if (!map[cat.id]) map[cat.id] = { label: cat.name, value: 0, color: cat.color };
+      map[cat.id].value += tx.amount / 100;
+    });
+    // Calcula percentuais
+    const total = Object.values(map).reduce((sum, c) => sum + c.value, 0) || 1;
+    return Object.values(map).map(c => ({ ...c, percent: (c.value / total) * 100 }));
+  }
+  const receitasPorCategoria = groupByCategory('income');
+  const despesasPorCategoria = groupByCategory('expense');
+
+  // Função para calcular o saldo confirmado (pagos) de uma conta
+  function getAccountConfirmedBalance(accountId: string) {
+    return transactions
+      .filter(tx => tx.account_id === accountId && tx.is_paid)
+      .reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount / 100 : -tx.amount / 100), 0);
+  }
+  // Função para calcular o saldo projetado (pagos e não pagos) de uma conta
+  function getAccountProjectedBalance(accountId: string) {
+    return transactions
+      .filter(tx => tx.account_id === accountId)
+      .reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount / 100 : -tx.amount / 100), 0);
+  }
+
+  // Saldos das contas (se disponível)
   const accountsForCurrency = accounts.filter(acc => acc.currency === selectedCurrency);
-  const totalForCurrency = accountsForCurrency.reduce((sum, acc) => {
-    const val = mockBalances[acc.id]?.replace(/[^\d,.-]/g, '').replace(',', '.') || '0';
-    return sum + parseFloat(val);
-  }, 0);
+  const totalConfirmed = accountsForCurrency.reduce((sum, acc) => sum + getAccountConfirmedBalance(acc.id), 0);
+  const totalProjected = accountsForCurrency.reduce((sum, acc) => sum + getAccountProjectedBalance(acc.id), 0);
   const currencySymbols: Record<string, string> = { BRL: 'R$', EUR: '€', USD: 'US$', GBP: '£' };
-  const formattedTotal = `${currencySymbols[selectedCurrency] || ''} ${totalForCurrency.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <Layout>
@@ -153,7 +204,7 @@ const DashboardPage: React.FC = () => {
               <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12l2 2 4-4"/></svg>
             </div>
             <span className="text-sm text-gray-500 mb-1">Receitas</span>
-            <span className="text-2xl font-bold text-gray-900">{currencySymbols[selectedCurrency] || ''} {data.receitaMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            <span className="text-2xl font-bold text-gray-900">{currencySymbols[selectedCurrency] || ''} {receitaMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
           </div>
           {/* Despesas */}
           <div className="bg-white rounded-xl shadow p-2 flex flex-col items-center justify-center">
@@ -161,7 +212,7 @@ const DashboardPage: React.FC = () => {
               <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16 12l-2-2-4 4"/></svg>
             </div>
             <span className="text-sm text-gray-500 mb-1">Despesas</span>
-            <span className="text-2xl font-bold text-gray-900">{currencySymbols[selectedCurrency] || ''} {data.despesaMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            <span className="text-2xl font-bold text-gray-900">{currencySymbols[selectedCurrency] || ''} {despesaMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
           </div>
           {/* Saldo Atual */}
           <div className="bg-white rounded-xl shadow p-2 flex flex-col items-center justify-center">
@@ -169,7 +220,7 @@ const DashboardPage: React.FC = () => {
               <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
             </div>
             <span className="text-sm text-gray-500 mb-1">Saldo Atual</span>
-            <span className="text-2xl font-bold text-gray-900">{currencySymbols[selectedCurrency] || ''} {data.resultadoMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            <span className="text-2xl font-bold text-gray-900">{currencySymbols[selectedCurrency] || ''} {saldoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
           </div>
         </div>
 
@@ -224,13 +275,13 @@ const DashboardPage: React.FC = () => {
                 {/* Grid horizontal */}
                 {yTicks.map((y, i) => (
                   <g key={y}>
-                    <line x1="50" x2="340" y1={200 - (y/24000)*160} y2={200 - (y/24000)*160} stroke="#e5e7eb" strokeWidth="1" />
-                    <text x="40" y={205 - (y/24000)*160} fontSize="13" fill="#888" textAnchor="end">{y}</text>
+                    <line x1="50" x2="340" y1={200 - (y / yMax) * 160} y2={200 - (y / yMax) * 160} stroke="#e5e7eb" strokeWidth="1" />
+                    <text x="40" y={205 - (y / yMax) * 160} fontSize="13" fill="#888" textAnchor="end">{y}</text>
                   </g>
                 ))}
                 {/* Barras */}
-                <rect x="90" y={200 - (data.receitaMes/24000)*160} width="60" height={(data.receitaMes/24000)*160} fill="#a5b4fc" rx="4" />
-                <rect x="210" y={200 - (data.despesaMes/24000)*160} width="60" height={(data.despesaMes/24000)*160} fill="#a5b4fc" rx="4" />
+                <rect x="90" y={200 - (receitaMes / yMax) * 160} width="60" height={(receitaMes / yMax) * 160} fill="#22c55e" rx="4" />
+                <rect x="210" y={200 - (despesaMes / yMax) * 160} width="60" height={(despesaMes / yMax) * 160} fill="#ef4444" rx="4" />
                 {/* Labels X */}
                 <text x="120" y="225" fontSize="15" fill="#666" textAnchor="middle">Receitas</text>
                 <text x="240" y="225" fontSize="15" fill="#666" textAnchor="middle">Despesas</text>
@@ -261,14 +312,18 @@ const DashboardPage: React.FC = () => {
                           <span className="text-gray-800 text-base">{account.name}</span>
                         </span>
                       </td>
-                      <td className="py-3 text-green-600 font-semibold text-base text-right min-w-[100px]">{mockBalances[account.id] || 'R$ 0,00'}</td>
-                      <td className="py-3 text-green-600 font-semibold text-base text-right min-w-[100px]">{mockBalances[account.id] || 'R$ 0,00'}</td>
+                      <td className="py-3 text-green-600 font-semibold text-base text-right min-w-[100px]">
+                        {getAccountConfirmedBalance(account.id).toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency })}
+                      </td>
+                      <td className="py-3 text-green-600 font-semibold text-base text-right min-w-[100px]">
+                        {getAccountProjectedBalance(account.id).toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency })}
+                      </td>
                     </tr>
                   ))}
                   <tr className="font-bold">
                     <td className="py-3 text-gray-900">Total</td>
-                    <td className="py-3 text-green-600 font-bold text-right min-w-[100px]">{formattedTotal}</td>
-                    <td className="py-3 text-green-600 font-bold text-right min-w-[100px]">{formattedTotal}</td>
+                    <td className="py-3 text-green-600 font-bold text-right min-w-[100px]">{currencySymbols[selectedCurrency] || ''} {totalConfirmed.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                    <td className="py-3 text-green-600 font-bold text-right min-w-[100px]">{currencySymbols[selectedCurrency] || ''} {totalProjected.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                   </tr>
                 </tbody>
               </table>
@@ -286,7 +341,7 @@ const DashboardPage: React.FC = () => {
                 <svg width="160" height="160" viewBox="0 0 36 36" className="block">
                   {(() => {
                     let acc = 0;
-                    return data.despesasPorCategoria.map((cat: CategoriaData, i: number) => {
+                    return despesasPorCategoria.map((cat: CategoriaData, i: number) => {
                       const val = (cat.percent / 100) * 100;
                       const dasharray = `${val} ${100 - val}`;
                       const dashoffset = 25 - acc;
@@ -308,7 +363,7 @@ const DashboardPage: React.FC = () => {
                 </svg>
               </div>
               <div className="flex-1 flex flex-col justify-center gap-2">
-                {data.despesasPorCategoria.map((cat: CategoriaData) => (
+                {despesasPorCategoria.map((cat: CategoriaData) => (
                   <div key={cat.label} className="flex items-center gap-2 mb-1">
                     <span className="w-3 h-3 rounded-full" style={{ background: cat.color }} />
                     <span className="text-gray-700 text-sm">{cat.label}</span>
@@ -321,7 +376,7 @@ const DashboardPage: React.FC = () => {
             {/* Footer total despesas */}
             <div className="w-full border-t border-gray-100 mt-6 pt-4 flex items-center justify-between">
               <span className="font-bold text-gray-800">Total</span>
-              <span className="font-bold text-red-600 text-lg">- R$ {data.despesasPorCategoria.reduce((sum, cat) => sum + cat.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              <span className="font-bold text-red-600 text-lg">- R$ {despesasPorCategoria.reduce((sum, cat) => sum + cat.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
             </div>
           </div>
           {/* Receitas por categoria */}
@@ -333,7 +388,7 @@ const DashboardPage: React.FC = () => {
                 <svg width="160" height="160" viewBox="0 0 36 36" className="block">
                   {(() => {
                     let acc = 0;
-                    return data.receitasPorCategoria.map((cat: CategoriaData, i: number) => {
+                    return receitasPorCategoria.map((cat: CategoriaData, i: number) => {
                       const val = (cat.percent / 100) * 100;
                       const dasharray = `${val} ${100 - val}`;
                       const dashoffset = 25 - acc;
@@ -355,7 +410,7 @@ const DashboardPage: React.FC = () => {
                 </svg>
               </div>
               <div className="flex-1 flex flex-col justify-center gap-2">
-                {data.receitasPorCategoria.map((cat: CategoriaData) => (
+                {receitasPorCategoria.map((cat: CategoriaData) => (
                   <div key={cat.label} className="flex items-center gap-2 mb-1">
                     <span className="w-3 h-3 rounded-full" style={{ background: cat.color }} />
                     <span className="text-gray-700 text-sm">{cat.label}</span>
@@ -368,7 +423,7 @@ const DashboardPage: React.FC = () => {
             {/* Footer total receitas */}
             <div className="w-full border-t border-gray-100 mt-6 pt-4 flex items-center justify-between">
               <span className="font-bold text-gray-800">Total</span>
-              <span className="font-bold text-green-600 text-lg">R$ {data.receitasPorCategoria.reduce((sum, cat) => sum + cat.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              <span className="font-bold text-green-600 text-lg">R$ {receitasPorCategoria.reduce((sum, cat) => sum + cat.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
             </div>
           </div>
         </div>

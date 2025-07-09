@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Category, CreateCategoryRequest, UpdateCategoryRequest, CategoryType } from '../types/category';
-import Select from 'react-select';
+import Select from './Select';
 
 interface CategoryFormProps {
   category?: Category;
@@ -235,19 +235,17 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
               className="w-full px-5 py-4 rounded-xl border border-gray-200 text-base bg-gray-100 text-gray-500"
             />
           ) : (
-            <select
-              id="parent_id"
+            <Select
               value={formData.parent_id || ''}
-              onChange={e => handleInputChange('parent_id', e.target.value)}
-              className="w-full px-5 py-4 rounded-xl border border-gray-200 text-base bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
-            >
-              <option value="">Nenhuma</option>
-              {filteredParentCategories.map((parent) => (
-                <option key={parent.id} value={parent.id}>
-                  {parent.name}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => handleInputChange('parent_id', value)}
+              options={[
+                { value: '', label: 'Nenhuma' },
+                ...filteredParentCategories.map((parent) => ({
+                  value: parent.id,
+                  label: parent.name
+                }))
+              ]}
+            />
           )}
         </div>
         <div className="w-full">
