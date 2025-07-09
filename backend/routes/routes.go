@@ -1,6 +1,9 @@
 package routes
 
 import (
+	"log"
+	"time"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/tonnarruda/my-personal-finance/handlers"
@@ -80,9 +83,17 @@ func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *hand
 
 	// Rota de health check
 	router.GET("/health", func(c *gin.Context) {
+		// Log detalhado da requisição de health check
+		log.Printf("[HEALTH-CHECK] ✅ Requisição recebida | IP: %s | User-Agent: %s | Timestamp: %s",
+			c.ClientIP(),
+			c.GetHeader("User-Agent"),
+			time.Now().Format("2006-01-02 15:04:05"),
+		)
+
 		c.JSON(200, gin.H{
-			"status":  "OK",
-			"message": "My Finance API está funcionando!",
+			"status":    "OK",
+			"message":   "My Finance API está funcionando!",
+			"timestamp": time.Now().Format(time.RFC3339),
 		})
 	})
 
