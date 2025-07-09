@@ -314,25 +314,55 @@ const TransactionsPage: React.FC = () => {
   // Saldo anterior: acumulado até o dia anterior ao primeiro lançamento do mês selecionado
   // Usar apenas as transações que passaram pelos filtros (moeda, banco, categoria)
   // MAS considerar todas as transações até a data, não apenas do mês selecionado
-  const saldoAnterior = transactions
-    .filter(t => {
-      const acc = accounts.find(a => a.id === t.account_id);
-      const bankMatch = selectedBank === '' || t.account_id === selectedBank;
-      const categoryMatch = selectedCategory === '' || t.category_id === selectedCategory;
-      const due = parseDateString(t.due_date);
-      
-      return (
-        acc &&
-        acc.currency === selectedCurrency &&
-        bankMatch &&
-        categoryMatch &&
-        t.is_paid &&
-        due &&
-        primeiraDataDoMes &&
-        due < primeiraDataDoMes
-      );
-    })
-    .reduce((acc, t) => acc + (t.type === 'income' ? t.amount : -t.amount), 0);
+  const transacoesParaSaldoAnterior = transactions.filter(t => {
+    const acc = accounts.find(a => a.id === t.account_id);
+    const bankMatch = selectedBank === '' || t.account_id === selectedBank;
+    const categoryMatch = selectedCategory === '' || t.category_id === selectedCategory;
+    const due = parseDateString(t.due_date);
+    
+    const shouldInclude = (
+      acc &&
+      acc.currency === selectedCurrency &&
+      bankMatch &&
+      categoryMatch &&
+      t.is_paid &&
+      due &&
+      primeiraDataDoMes &&
+      due < primeiraDataDoMes
+    );
+
+    // Debug logs
+    if (t.is_paid && acc && acc.currency === selectedCurrency) {
+      console.log('Transação para saldo anterior:', {
+        id: t.id,
+        description: t.description,
+        amount: t.amount,
+        type: t.type,
+        account: acc.name,
+        due_date: t.due_date,
+        primeiraDataDoMes: primeiraDataDoMes,
+        due: due,
+        shouldInclude,
+        bankMatch,
+        categoryMatch
+      });
+    }
+
+    return shouldInclude;
+  });
+
+  const saldoAnterior = transacoesParaSaldoAnterior.reduce((acc, t) => acc + (t.type === 'income' ? t.amount : -t.amount), 0);
+
+  // Debug log
+  console.log('Saldo anterior debug:', {
+    totalTransactions: transactions.length,
+    transacoesParaSaldoAnterior: transacoesParaSaldoAnterior.length,
+    saldoAnterior,
+    selectedCurrency,
+    selectedBank,
+    selectedCategory,
+    primeiraDataDoMes
+  });
 
   // Calcular saldo acumulado para cada dia (saldo do dia = saldo anterior + transações pagas do dia)
   let saldoAcumulado = saldoAnterior;
