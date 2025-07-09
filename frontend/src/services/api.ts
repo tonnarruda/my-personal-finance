@@ -16,7 +16,7 @@ import {
 } from '../types/account';
 import { Transaction, CreateTransactionRequest } from '../types/transaction';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
 
 // Função para obter o user_id do usuário logado
 const getUserId = (): string => {
