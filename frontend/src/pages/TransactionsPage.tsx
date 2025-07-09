@@ -313,10 +313,10 @@ const TransactionsPage: React.FC = () => {
 
   // Saldo anterior: acumulado até o dia anterior ao primeiro lançamento do mês selecionado
   // Usar apenas as transações que passaram pelos filtros (moeda, banco, categoria)
+  // MAS considerar todas as transações até a data, não apenas do mês selecionado
   const saldoAnterior = transactions
     .filter(t => {
       const acc = accounts.find(a => a.id === t.account_id);
-      const { month, year } = extractMonthYear(t.competence_date);
       const bankMatch = selectedBank === '' || t.account_id === selectedBank;
       const categoryMatch = selectedCategory === '' || t.category_id === selectedCategory;
       const due = parseDateString(t.due_date);
@@ -324,8 +324,6 @@ const TransactionsPage: React.FC = () => {
       return (
         acc &&
         acc.currency === selectedCurrency &&
-        month === selectedMonthYear.month &&
-        year === selectedMonthYear.year &&
         bankMatch &&
         categoryMatch &&
         t.is_paid &&
