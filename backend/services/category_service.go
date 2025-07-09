@@ -207,10 +207,30 @@ func (s *CategoryService) DeleteCategory(id string, userID string) error {
 		return fmt.Errorf("categoria não encontrada")
 	}
 
+	// Verificar se há transações associadas à categoria pai
+	hasTransactions, err := s.db.HasTransactionsByCategory(id, userID)
+	if err != nil {
+		return fmt.Errorf("erro ao verificar transações associadas: %w", err)
+	}
+	if hasTransactions {
+		return fmt.Errorf("não é possível excluir a categoria '%s' pois ela possui transações associadas. Remova ou altere as transações primeiro", existingCategory.Name)
+	}
+
 	// Buscar subcategorias ativas
 	subcategories, err := s.db.GetSubcategories(id, userID)
 	if err != nil {
 		return fmt.Errorf("erro ao verificar subcategorias: %w", err)
+	}
+
+	// Verificar se há transações associadas às subcategorias
+	for _, subcategory := range subcategories {
+		hasSubTransactions, err := s.db.HasTransactionsByCategory(subcategory.ID, userID)
+		if err != nil {
+			return fmt.Errorf("erro ao verificar transações da subcategoria %s: %w", subcategory.Name, err)
+		}
+		if hasSubTransactions {
+			return fmt.Errorf("não é possível excluir a categoria '%s' pois a subcategoria '%s' possui transações associadas. Remova ou altere as transações primeiro", existingCategory.Name, subcategory.Name)
+		}
 	}
 
 	// Excluir todas as subcategorias primeiro (soft delete)

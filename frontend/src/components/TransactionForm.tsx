@@ -181,7 +181,15 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!form.description.trim()) newErrors.description = 'Descrição obrigatória';
-    if (!form.amount || form.amount <= 0) newErrors.amount = 'Valor obrigatório';
+    
+    // Na edição (quando há id), permitir valor zero
+    if (id) {
+      if (form.amount < 0) newErrors.amount = 'Valor não pode ser negativo';
+    } else {
+      // Na criação, valor deve ser maior que zero
+      if (!form.amount || form.amount <= 0) newErrors.amount = 'Valor obrigatório';
+    }
+    
     if (!form.due_date) newErrors.due_date = 'Data obrigatória';
     if (!form.competence_date) newErrors.competence_date = 'Competência obrigatória';
     if (!form.account_id) newErrors.account_id = 'Conta obrigatória';

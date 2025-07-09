@@ -176,3 +176,25 @@ func (d *Database) GetInitialTransaction(accountID string, userID string) (*stru
 	}
 	return &tx, nil
 }
+
+// HasTransactionsByAccount verifica se há transações associadas a uma conta
+func (d *Database) HasTransactionsByAccount(accountID string, userID string) (bool, error) {
+	query := `SELECT COUNT(*) FROM transactions WHERE account_id = $1 AND user_id = $2 AND deleted_at IS NULL`
+	var count int
+	err := d.db.QueryRow(query, accountID, userID).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// HasTransactionsByCategory verifica se há transações associadas a uma categoria
+func (d *Database) HasTransactionsByCategory(categoryID string, userID string) (bool, error) {
+	query := `SELECT COUNT(*) FROM transactions WHERE category_id = $1 AND user_id = $2 AND deleted_at IS NULL`
+	var count int
+	err := d.db.QueryRow(query, categoryID, userID).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}

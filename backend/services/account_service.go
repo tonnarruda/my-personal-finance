@@ -220,6 +220,15 @@ func (s *AccountService) DeleteAccount(id string, userID string) error {
 		return fmt.Errorf("conta não encontrada")
 	}
 
+	// Verificar se há transações associadas
+	hasTransactions, err := s.db.HasTransactionsByAccount(id, userID)
+	if err != nil {
+		return fmt.Errorf("erro ao verificar transações associadas: %w", err)
+	}
+	if hasTransactions {
+		return fmt.Errorf("não é possível excluir a conta '%s' pois ela possui transações associadas. Remova ou altere as transações primeiro", existingAccount.Name)
+	}
+
 	// Excluir a conta
 	if err := s.db.DeleteAccount(id, userID); err != nil {
 		return fmt.Errorf("erro ao excluir conta: %w", err)
