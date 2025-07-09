@@ -244,30 +244,6 @@ const ModernChart: React.FC<ModernChartProps> = ({
         >
           Despesas
         </text>
-        
-        {/* Ícones */}
-        <g transform={`translate(${startX + barWidth / 2 - 10}, ${height - 40})`}>
-          <circle cx="10" cy="10" r="12" fill="#22c55e" fillOpacity="0.1" />
-          <path
-            d="M6 10l2 2 4-4"
-            stroke="#22c55e"
-            strokeWidth="2"
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </g>
-        
-        <g transform={`translate(${startX + barWidth + barSpacing + barWidth / 2 - 10}, ${height - 40})`}>
-          <circle cx="10" cy="10" r="12" fill="#ef4444" fillOpacity="0.1" />
-          <path
-            d="M6 14l8-8M14 14l-8-8"
-            stroke="#ef4444"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </g>
       </svg>
       
       {/* Resultado mensal */}
