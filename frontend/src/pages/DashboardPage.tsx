@@ -5,6 +5,9 @@ import { Account } from '../types/account';
 import { Transaction } from '../types/transaction';
 import { Category } from '../types/category';
 import Layout from '../components/Layout';
+import ModernChart from '../components/ModernChart';
+import ModernResultCard from '../components/ModernResultCard';
+import ModernMetrics from '../components/ModernMetrics';
 
 const DashboardPage: React.FC = () => {
   const [nome, setNome] = useState('');
@@ -126,11 +129,6 @@ const DashboardPage: React.FC = () => {
   const despesaMes = transactionsForCurrency.filter(tx => tx.type === 'expense' && tx.is_paid).reduce((sum, tx) => sum + (tx.amount / 100), 0);
   const resultadoMes = receitaMes - despesaMes;
 
-  // Calcule o valor máximo para o eixo Y do gráfico de barras
-  const maxBarValue = Math.max(receitaMes, despesaMes, 1);
-  const yMax = Math.ceil(maxBarValue / 1000) * 1000 || 1000;
-  const yTicks = Array.from({ length: 5 }, (_, i) => Math.round((yMax / 4) * i));
-
   // Saldo atual acumulado de todas as transações pagas da moeda (corrigindo para centavos)
   const saldoAtual = transactions
     .filter(tx => {
@@ -138,6 +136,48 @@ const DashboardPage: React.FC = () => {
       return acc && acc.currency === selectedCurrency && tx.is_paid;
     })
     .reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount / 100 : -tx.amount / 100), 0);
+
+  // Calcula dados do mês anterior para comparação
+  const previousMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+  const previousYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+  
+  const transactionsForCurrencyPreviousMonth = transactions.filter(tx => {
+    const txDate = new Date(tx.competence_date || tx.due_date);
+    const acc = accounts.find(a => a.id === tx.account_id);
+    return (
+      acc && acc.currency === selectedCurrency &&
+      txDate.getMonth() + 1 === previousMonth &&
+      txDate.getFullYear() === previousYear
+    );
+  });
+
+  const receitaMesAnterior = transactionsForCurrencyPreviousMonth.filter(tx => tx.type === 'income' && tx.is_paid).reduce((sum, tx) => sum + (tx.amount / 100), 0);
+  const despesaMesAnterior = transactionsForCurrencyPreviousMonth.filter(tx => tx.type === 'expense' && tx.is_paid).reduce((sum, tx) => sum + (tx.amount / 100), 0);
+  const resultadoMesAnterior = receitaMesAnterior - despesaMesAnterior;
+
+  // Para o saldo, calculamos a variação considerando todos os dados históricos
+  const saldoMesAnterior = transactions
+    .filter(tx => {
+      const txDate = new Date(tx.competence_date || tx.due_date);
+      const acc = accounts.find(a => a.id === tx.account_id);
+      return (
+        acc && acc.currency === selectedCurrency && tx.is_paid &&
+        (txDate.getFullYear() < previousYear || 
+         (txDate.getFullYear() === previousYear && txDate.getMonth() + 1 <= previousMonth))
+      );
+    })
+    .reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount / 100 : -tx.amount / 100), 0);
+
+  // Verifica se há dados históricos para comparação
+  const hasHistoricalData = transactionsForCurrencyPreviousMonth.length > 0;
+
+  // Calcula variações percentuais (apenas quando há dados históricos)
+  const variacaoReceitas = hasHistoricalData && receitaMesAnterior > 0 ? ((receitaMes - receitaMesAnterior) / receitaMesAnterior) * 100 : 0;
+  const variacaoDespesas = hasHistoricalData && despesaMesAnterior > 0 ? ((despesaMes - despesaMesAnterior) / despesaMesAnterior) * 100 : 0;
+  const variacaoSaldo = hasHistoricalData && saldoMesAnterior !== 0 ? ((saldoAtual - saldoMesAnterior) / Math.abs(saldoMesAnterior)) * 100 : 0;
+
+  // Calcula mudança percentual do resultado mensal (apenas quando há dados históricos)
+  const percentChangeResultado = hasHistoricalData && resultadoMesAnterior !== 0 ? ((resultadoMes - resultadoMesAnterior) / Math.abs(resultadoMesAnterior)) * 100 : 0;
 
   // Agrupa receitas/despesas por categoria
   function groupByCategory(type: 'income' | 'expense') {
@@ -196,32 +236,21 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Cards de resumo */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
-          {/* Receitas */}
-          <div className="bg-white rounded-xl shadow p-2 flex flex-col items-center justify-center">
-            <div className="w-10 h-10 flex items-center justify-center rounded-full bg-green-50 mb-2">
-              <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12l2 2 4-4"/></svg>
-            </div>
-            <span className="text-sm text-gray-500 mb-1">Receitas</span>
-            <span className="text-2xl font-bold text-gray-900">{currencySymbols[selectedCurrency] || ''} {receitaMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-          </div>
-          {/* Despesas */}
-          <div className="bg-white rounded-xl shadow p-2 flex flex-col items-center justify-center">
-            <div className="w-10 h-10 flex items-center justify-center rounded-full bg-red-50 mb-2">
-              <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16 12l-2-2-4 4"/></svg>
-            </div>
-            <span className="text-sm text-gray-500 mb-1">Despesas</span>
-            <span className="text-2xl font-bold text-gray-900">{currencySymbols[selectedCurrency] || ''} {despesaMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-          </div>
-          {/* Saldo Atual */}
-          <div className="bg-white rounded-xl shadow p-2 flex flex-col items-center justify-center">
-            <div className="w-10 h-10 flex items-center justify-center rounded-full bg-blue-50 mb-2">
-              <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-            </div>
-            <span className="text-sm text-gray-500 mb-1">Saldo Atual</span>
-            <span className="text-2xl font-bold text-gray-900">{currencySymbols[selectedCurrency] || ''} {saldoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-          </div>
+        {/* Cards de resumo modernos */}
+        <div className="mb-10">
+          <ModernMetrics 
+            receitas={receitaMes}
+            despesas={despesaMes}
+            saldo={saldoAtual}
+            currency={selectedCurrency}
+            variacaoReceitas={variacaoReceitas}
+            variacaoDespesas={variacaoDespesas}
+            variacaoSaldo={variacaoSaldo}
+            hasHistoricalData={hasHistoricalData}
+            receitaMesAnterior={receitaMesAnterior}
+            despesaMesAnterior={despesaMesAnterior}
+            saldoMesAnterior={saldoMesAnterior}
+          />
         </div>
 
         {/* Bloco de acesso rápido */}
@@ -266,30 +295,40 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
         {/* Cards principais filtrados pela currency selecionada */}
-        <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row gap-6">
-          {/* Card Gráfico */}
+        <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row gap-6">
+          {/* Card Gráfico Moderno */}
           <div className="flex-1 bg-white rounded-2xl shadow p-8 flex flex-col min-w-0">
             <div className="text-xl font-bold text-gray-900 mb-6">Visão Mensal</div>
             <div className="flex-1 flex flex-col justify-center">
-              <svg viewBox="0 0 380 240" width="100%" height="240" className="mb-2">
-                {/* Grid horizontal */}
-                {yTicks.map((y, i) => (
-                  <g key={y}>
-                    <line x1="50" x2="340" y1={200 - (y / yMax) * 160} y2={200 - (y / yMax) * 160} stroke="#e5e7eb" strokeWidth="1" />
-                    <text x="40" y={205 - (y / yMax) * 160} fontSize="13" fill="#888" textAnchor="end">{y}</text>
-                  </g>
-                ))}
-                {/* Barras */}
-                <rect x="90" y={200 - (receitaMes / yMax) * 160} width="60" height={(receitaMes / yMax) * 160} fill="#22c55e" rx="4" />
-                <rect x="210" y={200 - (despesaMes / yMax) * 160} width="60" height={(despesaMes / yMax) * 160} fill="#ef4444" rx="4" />
-                {/* Labels X */}
-                <text x="120" y="225" fontSize="15" fill="#666" textAnchor="middle">Receitas</text>
-                <text x="240" y="225" fontSize="15" fill="#666" textAnchor="middle">Despesas</text>
-              </svg>
+              <ModernChart 
+                data={{
+                  receitas: receitaMes,
+                  despesas: despesaMes,
+                  currency: selectedCurrency
+                }}
+                width={400}
+                height={300}
+              />
             </div>
           </div>
-          {/* Card Saldos de Caixa */}
-          <div className="flex-1 bg-white rounded-2xl shadow p-8 flex flex-col min-w-0">
+          
+          {/* Card Resultado Moderno */}
+          <div className="lg:w-80">
+            <ModernResultCard
+              receitas={receitaMes}
+              despesas={despesaMes}
+              resultado={resultadoMes}
+              currency={selectedCurrency}
+              percentChange={percentChangeResultado}
+              hasHistoricalData={hasHistoricalData}
+              resultadoMesAnterior={resultadoMesAnterior}
+            />
+          </div>
+        </div>
+
+        {/* Card Saldos de Caixa */}
+        <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 mt-6">
+          <div className="bg-white rounded-2xl shadow p-8 flex flex-col min-w-0">
             <div className="text-xl font-bold text-gray-900 mb-6">Saldos de caixa</div>
             <div className="w-full overflow-x-auto">
               <div className="mb-2 ml-1 text-lg font-semibold text-gray-700">{selectedCurrency}</div>
@@ -313,10 +352,10 @@ const DashboardPage: React.FC = () => {
                         </span>
                       </td>
                       <td className="py-3 text-green-600 font-semibold text-base text-right min-w-[100px]">
-                        {getAccountConfirmedBalance(account.id).toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency })}
+                        {getAccountConfirmedBalance(account.id).toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency, minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="py-3 text-green-600 font-semibold text-base text-right min-w-[100px]">
-                        {getAccountProjectedBalance(account.id).toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency })}
+                        {getAccountProjectedBalance(account.id).toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency, minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
                   ))}

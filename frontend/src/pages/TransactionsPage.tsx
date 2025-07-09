@@ -5,7 +5,7 @@ import Select from '../components/Select';
 import { accountService, transactionService, categoryService } from '../services/api';
 import { Transaction } from '../types/transaction';
 import { getUser } from '../services/auth';
-import FeedbackToast from '../components/FeedbackToast';
+import { useToast } from '../contexts/ToastContext';
 
 const monthNames = [
   'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
@@ -35,13 +35,13 @@ const TransactionsPage: React.FC = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const today = new Date();
   const [selectedMonthYear, setSelectedMonthYear] = useState({
     month: today.getMonth() + 1,
     year: today.getFullYear(),
   });
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
+  const { showSuccess, showError } = useToast();
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -191,16 +191,16 @@ const TransactionsPage: React.FC = () => {
       const payload = toBackendPayload(data);
       if (editingTransaction && editingTransaction.id) {
         await transactionService.updateTransaction(editingTransaction.id, payload);
-        setFeedback({ type: 'success', message: 'Transação atualizada com sucesso!' });
+        showSuccess('Transação atualizada com sucesso!');
       } else {
         await transactionService.createTransaction(payload);
-        setFeedback({ type: 'success', message: 'Transação criada com sucesso!' });
+        showSuccess('Transação criada com sucesso!');
       }
       setShowForm(false);
       setEditingTransaction(null);
       fetchData();
     } catch (err) {
-      setFeedback({ type: 'error', message: 'Erro ao salvar transação.' });
+      showError('Erro ao salvar transação.');
     }
   };
   const handleDelete = (id: string) => {
@@ -212,11 +212,11 @@ const TransactionsPage: React.FC = () => {
     if (!transactionToDelete) return;
     try {
       await transactionService.deleteTransaction(transactionToDelete.id!);
-      setFeedback({ type: 'success', message: 'Transação excluída com sucesso!' });
+      showSuccess('Transação excluída com sucesso!');
       setTransactionToDelete(null);
       fetchData();
     } catch {
-      setFeedback({ type: 'error', message: 'Erro ao excluir transação.' });
+      showError('Erro ao excluir transação.');
     }
   };
 
@@ -473,9 +473,6 @@ const TransactionsPage: React.FC = () => {
       {/* Espaço para não sobrepor o conteúdo */}
       <div className="h-[250px]"></div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {feedback && (
-          <FeedbackToast message={feedback.message} type={feedback.type} onClose={() => setFeedback(null)} />
-        )}
         {/* Filtros */}
         <div className="flex flex-wrap gap-6 items-end mb-2">
           <div>

@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signup } from '../services/api';
-import FeedbackToast from '../components/FeedbackToast';
+import { useToast } from '../contexts/ToastContext';
 
 const SignupPage: React.FC = () => {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [erro, setErro] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { showError } = useToast();
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -17,13 +17,12 @@ const SignupPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErro('');
     if (!nome || !email || !senha) {
-      setErro('Preencha todos os campos.');
+      showError('Preencha todos os campos.');
       return;
     }
     if (senha.length < 8) {
-      setErro('A senha deve ter no mínimo 8 caracteres.');
+      showError('A senha deve ter no mínimo 8 caracteres.');
       return;
     }
     setLoading(true);
@@ -31,7 +30,7 @@ const SignupPage: React.FC = () => {
       await signup(nome, email, senha);
       navigate('/login');
     } catch (err: any) {
-      setErro(err?.response?.data?.erro || 'Erro ao cadastrar.');
+      showError(err?.response?.data?.erro || 'Erro ao cadastrar.');
     } finally {
       setLoading(false);
     }
@@ -79,7 +78,6 @@ const SignupPage: React.FC = () => {
               required
             />
           </div>
-          {erro && <FeedbackToast message={erro} type="error" onClose={() => setErro('')} />}
           <button
             type="submit"
             className="w-full px-8 py-4 bg-[#f1f3fe] text-[#6366f1] text-xl font-bold rounded-xl shadow hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"

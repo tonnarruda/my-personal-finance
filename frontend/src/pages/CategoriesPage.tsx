@@ -4,17 +4,17 @@ import { categoryService } from '../services/api';
 import CategoryList from '../components/CategoryList';
 import CategoryForm from '../components/CategoryForm';
 import Layout from '../components/Layout';
+import { useToast } from '../contexts/ToastContext';
 
 const CategoriesPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | undefined>();
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [parentCategory, setParentCategory] = useState<Category | undefined>();
   const [showInactive, setShowInactive] = useState(false);
+  const { showSuccess, showError } = useToast();
 
   useEffect(() => {
     loadCategories();
@@ -46,11 +46,10 @@ const CategoriesPage: React.FC = () => {
   const loadCategories = async () => {
     try {
       setIsLoading(true);
-      setError('');
       const allCats = await categoryService.getAllCategories();
       setCategories(allCats);
     } catch (err) {
-      setError('Erro ao carregar categorias. Verifique se o backend está rodando.');
+      showError('Erro ao carregar categorias. Verifique se o backend está rodando.');
       console.error('Erro ao carregar categorias:', err);
     } finally {
       setIsLoading(false);
@@ -59,17 +58,13 @@ const CategoriesPage: React.FC = () => {
 
   const handleCreateCategory = async (data: CreateCategoryRequest) => {
     try {
-      setError('');
-      setSuccess('');
       const message = await categoryService.createCategory(data);
-      setSuccess(message);
+      showSuccess(message);
       setShowForm(false);
       setEditingCategory(undefined);
       await loadCategories();
-      // Limpar mensagem de sucesso após 3 segundos
-      setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Erro ao criar categoria');
+      showError(err.response?.data?.error || 'Erro ao criar categoria');
       console.error('Erro ao criar categoria:', err);
     }
   };
@@ -77,17 +72,13 @@ const CategoriesPage: React.FC = () => {
   const handleUpdateCategory = async (data: UpdateCategoryRequest) => {
     if (!editingCategory) return;
     try {
-      setError('');
-      setSuccess('');
       const message = await categoryService.updateCategory(editingCategory.id, data);
-      setSuccess(message);
+      showSuccess(message);
       setShowForm(false);
       setEditingCategory(undefined);
       await loadCategories();
-      // Limpar mensagem de sucesso após 3 segundos
-      setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Erro ao atualizar categoria');
+      showError(err.response?.data?.error || 'Erro ao atualizar categoria');
       console.error('Erro ao atualizar categoria:', err);
     }
   };
@@ -99,16 +90,12 @@ const CategoriesPage: React.FC = () => {
   const confirmDeleteCategory = async () => {
     if (!categoryToDelete) return;
     try {
-      setError('');
-      setSuccess('');
       setCategoryToDelete(null);
       const message = await categoryService.deleteCategory(categoryToDelete.id);
-      setSuccess(message);
+      showSuccess(message);
       await loadCategories();
-      // Limpar mensagem de sucesso após 3 segundos
-      setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Erro ao excluir categoria');
+      showError(err.response?.data?.error || 'Erro ao excluir categoria');
       console.error('Erro ao excluir categoria:', err);
     }
   };
@@ -202,16 +189,6 @@ const CategoriesPage: React.FC = () => {
       {/* Espaço para não sobrepor o conteúdo */}
       <div className="h-[110px]"></div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
-            <p className="text-sm text-red-800">{error}</p>
-          </div>
-        )}
-        {success && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4">
-            <p className="text-sm text-green-800">{success}</p>
-          </div>
-        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Coluna Receita */}
           <div className="bg-white rounded-xl shadow p-6">
