@@ -36,6 +36,7 @@ func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *hand
 		categories.POST("", categoryHandler.CreateCategory)
 		categories.GET("", categoryHandler.GetAllCategories)
 		categories.GET("/by-type", categoryHandler.GetCategoriesByType)
+		categories.GET("/with-subcategories", categoryHandler.GetCategoriesWithSubcategories)
 		categories.GET("/:id", categoryHandler.GetCategoryByID)
 		categories.GET("/:id/subcategories", categoryHandler.GetSubcategories)
 		categories.PUT("/:id", categoryHandler.UpdateCategory)

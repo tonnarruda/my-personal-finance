@@ -3,6 +3,7 @@ import { Account } from '../types/account';
 import { Transaction } from '../types/transaction';
 import CurrencyInput from './CurrencyInput';
 import Select from './Select';
+import ElegantSelect from './ElegantSelect';
 import DateInput from './DateInput';
 import { accountService } from '../services/api';
 
@@ -162,7 +163,7 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onCancel, 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div>
           <label className="block text-base font-medium text-gray-700 mb-2">Tipo de Conta</label>
-          <Select
+          <ElegantSelect
             value={formData.type}
             onChange={(value) => handleInputChange('type', value)}
             options={typeOptions}
@@ -171,7 +172,7 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onCancel, 
         </div>
         <div>
           <label className="block text-base font-medium text-gray-700 mb-2">Moeda</label>
-          <Select
+          <ElegantSelect
             value={formData.currency}
             onChange={(value) => handleInputChange('currency', value)}
             options={currencyOptions}
@@ -180,7 +181,7 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onCancel, 
       </div>
       <div className="mb-6">
         <label className="block text-base font-medium text-gray-700 mb-2">Tipo de Operação</label>
-        <Select
+        <ElegantSelect
           value={formData.accountType}
           onChange={(value) => handleInputChange('accountType', value)}
           options={accountTypeOptions}

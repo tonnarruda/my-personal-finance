@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Category, CreateCategoryRequest, UpdateCategoryRequest, CategoryType } from '../types/category';
 import Select from './Select';
+import ElegantSelect from './ElegantSelect';
 
 interface CategoryFormProps {
   category?: Category;
@@ -235,7 +236,7 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
               className="w-full px-5 py-4 rounded-xl border border-gray-200 text-base bg-gray-100 text-gray-500"
             />
           ) : (
-            <Select
+            <ElegantSelect
               value={formData.parent_id || ''}
               onChange={(value) => handleInputChange('parent_id', value)}
               options={[

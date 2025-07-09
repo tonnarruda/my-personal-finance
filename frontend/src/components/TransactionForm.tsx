@@ -5,6 +5,8 @@ import { getUser } from '../services/auth';
 import DateInput from './DateInput';
 import CurrencyInput from './CurrencyInput';
 import Select from './Select';
+import CategorySelect from './CategorySelect';
+import AccountSelect from './AccountSelect';
 import { ThumbsUp, Infinity, Repeat2 } from 'lucide-react';
 
 interface TransactionFormProps {
@@ -130,7 +132,7 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
   }, [currency, form.account_id]);
 
   useEffect(() => {
-    categoryService.getCategoriesByType(form.type).then(cats => setCategories(Array.isArray(cats) ? cats : []));
+    categoryService.getCategoriesWithSubcategories(form.type).then(cats => setCategories(Array.isArray(cats) ? cats : []));
   }, [form.type]);
 
   // Limpar conta selecionada quando a moeda mudar
@@ -249,6 +251,33 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
     }
   };
 
+  // Função para converter categorias com subcategorias em opções do dropdown
+  const getCategoryOptions = () => {
+    const options = [];
+    
+    for (const categoryWithSubs of categories) {
+      // Adicionar categoria principal
+      options.push({
+        value: categoryWithSubs.id,
+        label: categoryWithSubs.name,
+        isSubcategory: false
+      });
+      
+      // Adicionar subcategorias
+      if (categoryWithSubs.subcategories && categoryWithSubs.subcategories.length > 0) {
+        for (const subcategory of categoryWithSubs.subcategories) {
+          options.push({
+            value: subcategory.id,
+            label: subcategory.name,
+            isSubcategory: true
+          });
+        }
+      }
+    }
+    
+    return options;
+  };
+
 
 
   return (
@@ -329,7 +358,7 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
         {/* Conta/Cartão */}
         <div>
           <label className="block text-base font-medium text-gray-700 mb-1">Conta/Cartão</label>
-          <Select
+          <AccountSelect
             value={form.account_id}
             onChange={(value) => handleChange('account_id', value)}
             options={[
@@ -348,12 +377,12 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
         {/* Categoria */}
         <div>
           <label className="block text-base font-medium text-gray-700 mb-1">Categoria</label>
-          <Select
+          <CategorySelect
             value={form.category_id}
             onChange={(value) => handleChange('category_id', value)}
             options={[
               { value: '', label: 'Buscar a categoria..' },
-              ...categories.map(cat => ({ value: cat.id, label: cat.name }))
+              ...getCategoryOptions()
             ]}
             error={!!errors.category_id}
           />
