@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../services/api';
 import { setUser } from '../services/auth';
+import FeedbackToast from '../components/FeedbackToast';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -64,7 +65,7 @@ const LoginPage: React.FC = () => {
               required
             />
           </div>
-          {erro && <div className="text-red-600 text-sm">{erro}</div>}
+          {erro && <FeedbackToast message={erro} type="error" onClose={() => setErro('')} />}
           <button
             type="submit"
             className="w-full px-8 py-4 bg-[#f1f3fe] text-[#6366f1] text-xl font-bold rounded-xl shadow hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"

@@ -14,6 +14,7 @@ import {
   UpdateAccountRequest as UpdateAccountRequestType,
   ApiResponse as AccountApiResponse
 } from '../types/account';
+import { Transaction, CreateTransactionRequest } from '../types/transaction';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
@@ -102,7 +103,8 @@ export const categoryService = {
   // Atualizar categoria
   updateCategory: async (id: string, data: UpdateCategoryRequest): Promise<string> => {
     const userId = getUserId();
-    const response = await api.put<ApiResponse<void>>(`/categories/${id}?user_id=${userId}`, data);
+    const payload = { ...data, user_id: userId };
+    const response = await api.put<ApiResponse<void>>(`/categories/${id}?user_id=${userId}`, payload);
     return response.data.message || 'Categoria atualizada com sucesso';
   },
 
@@ -155,6 +157,62 @@ export const accountService = {
     const response = await api.delete<AccountApiResponse>(`/accounts/${id}?user_id=${userId}`);
     return response.data.message || 'Conta excluída com sucesso';
   },
+
+  // Buscar transação inicial de uma conta
+  getInitialTransaction: async (accountId: string): Promise<Transaction | null> => {
+    const userId = getUserId();
+    try {
+      const response = await api.get<{ transaction: Transaction }>(`/accounts/${accountId}/initial-transaction?user_id=${userId}`);
+      return response.data.transaction || null;
+    } catch (error) {
+      // Se não encontrar a transação inicial, retorna null
+      return null;
+    }
+  },
+};
+
+export const transactionService = {
+  // Criar transação
+  createTransaction: async (data: any): Promise<Transaction> => {
+    const userId = getUserId();
+    const payload = {
+      ...data,
+      user_id: userId
+    };
+    const response = await api.post<Transaction>(`/transactions?user_id=${userId}`, payload);
+    return response.data;
+  },
+
+  // Buscar todas as transações
+  getAllTransactions: async (): Promise<Transaction[]> => {
+    const userId = getUserId();
+    const response = await api.get<Transaction[]>(`/transactions?user_id=${userId}`);
+    return response.data;
+  },
+
+  // Buscar transação por ID
+  getTransactionById: async (id: string): Promise<Transaction> => {
+    const userId = getUserId();
+    const response = await api.get<Transaction>(`/transactions/${id}?user_id=${userId}`);
+    return response.data;
+  },
+
+  // Atualizar transação
+  updateTransaction: async (id: string, data: Partial<CreateTransactionRequest>): Promise<Transaction> => {
+    const userId = getUserId();
+    const payload = {
+      ...data,
+      user_id: userId
+    };
+    const response = await api.put<Transaction>(`/transactions/${id}?user_id=${userId}`, payload);
+    return response.data;
+  },
+
+  // Deletar transação
+  deleteTransaction: async (id: string): Promise<void> => {
+    const userId = getUserId();
+    await api.delete(`/transactions/${id}?user_id=${userId}`);
+  },
 };
 
 // Função para login
@@ -167,6 +225,29 @@ export async function login(email: string, senha: string) {
 export async function signup(nome: string, email: string, senha: string) {
   const response = await api.post('/signup', { nome, email, senha });
   return response.data;
+}
+
+// Função utilitária para buscar ou criar categoria por nome e tipo
+export async function getOrCreateCategoryByName(name: string, type: CategoryType): Promise<Category> {
+  const all = await categoryService.getCategoriesByType(type);
+  let found = all.find(cat => cat.name.toLowerCase() === name.toLowerCase());
+  if (found) return found;
+  // Cria categoria padrão se não existir
+  const userId = getUserId();
+  const newCat: CreateCategoryRequest = {
+    name,
+    description: name,
+    type,
+    color: '#22c55e',
+    icon: '💰',
+    user_id: userId, // <-- Adiciona user_id aqui
+  } as any;
+  await categoryService.createCategory(newCat);
+  // Buscar novamente para garantir que temos o id
+  const allAfter = await categoryService.getCategoriesByType(type);
+  found = allAfter.find(cat => cat.name.toLowerCase() === name.toLowerCase());
+  if (!found) throw new Error('Falha ao criar categoria de saldo inicial');
+  return found;
 }
 
 export default api; 

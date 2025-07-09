@@ -61,16 +61,18 @@ func main() {
 
 	// Inicializar serviços
 	categoryService := services.NewCategoryService(db)
-	accountService := services.NewAccountService(db)
+	transactionCreator := services.NewDatabaseTransactionCreator(db)
+	accountService := services.NewAccountService(db, transactionCreator)
 	userService := services.NewUserService(db)
 
 	// Inicializar handlers
 	categoryHandler := handlers.NewCategoryHandler(categoryService)
 	accountHandler := handlers.NewAccountHandler(accountService)
 	authHandler := handlers.NewAuthHandler(userService)
+	transactionHandler := &handlers.TransactionHandler{DB: db}
 
 	// Configurar rotas
-	router := routes.SetupRoutes(categoryHandler, accountHandler, authHandler)
+	router := routes.SetupRoutes(categoryHandler, accountHandler, authHandler, transactionHandler)
 
 	// Configurar porta do servidor
 	port := getEnv("PORT", "8080")

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -55,6 +56,14 @@ func (h *AuthHandler) LoginHandler(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"erro": err.Error()})
 		return
 	}
+
+	// Configura as categorias padrão para o usuário se for a primeira vez
+	err = h.UserService.SetupDefaultCategoriesForUser(user.ID)
+	if err != nil {
+		// Log do erro mas não falha o login
+		fmt.Printf("Erro ao configurar categorias padrão para usuário %s: %v\n", user.ID, err)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"id":    user.ID,
 		"nome":  user.Nome,

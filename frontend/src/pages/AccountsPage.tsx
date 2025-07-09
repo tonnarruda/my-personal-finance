@@ -4,6 +4,9 @@ import { accountService } from '../services/api';
 import { CreateAccountRequest, UpdateAccountRequest, Account } from '../types/account';
 import { getUser } from '../services/auth';
 import Layout from '../components/Layout';
+import FeedbackToast from '../components/FeedbackToast';
+import { transactionService, categoryService, getOrCreateCategoryByName } from '../services/api';
+import { Transaction } from '../types/transaction';
 
 const AccountsPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
@@ -15,21 +18,26 @@ const AccountsPage: React.FC = () => {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [deletingAccount, setDeletingAccount] = useState<Account | null>(null);
   const [showInactive, setShowInactive] = useState(false);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  const fetchAccounts = async () => {
+  const fetchAccountsAndTransactions = async () => {
     setLoadingAccounts(true);
     try {
-      const data = await accountService.getAllAccounts();
-      setAccounts(data);
+      const [accs, txs] = await Promise.all([
+        accountService.getAllAccounts(),
+        transactionService.getAllTransactions(),
+      ]);
+      setAccounts(accs);
+      setTransactions(Array.isArray(txs) ? txs : []);
     } catch (err: any) {
-      setError('Erro ao carregar contas');
+      setError('Erro ao carregar contas ou transações');
     } finally {
       setLoadingAccounts(false);
     }
   };
 
   useEffect(() => {
-    fetchAccounts();
+    fetchAccountsAndTransactions();
   }, []);
 
   useEffect(() => {
@@ -81,7 +89,7 @@ const AccountsPage: React.FC = () => {
       await accountService.deleteAccount(deletingAccount.id);
       setSuccess('Conta excluída com sucesso!');
       setDeletingAccount(null);
-      fetchAccounts();
+      fetchAccountsAndTransactions();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Erro ao excluir conta');
@@ -94,6 +102,30 @@ const AccountsPage: React.FC = () => {
     setDeletingAccount(null);
   };
 
+  // Função para formatar data para ISO com timezone
+  function formatDateToISO(dateStr: string): string {
+    if (!dateStr) return '';
+    
+    // Se já está no formato ISO completo, retorna como está
+    if (dateStr.includes('T') && dateStr.includes('Z')) {
+      return dateStr;
+    }
+    
+    // Se está no formato YYYY-MM-DD, adiciona T00:00:00Z
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return `${dateStr}T00:00:00Z`;
+    }
+    
+    // Para outros formatos, converte para Date e depois para ISO
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      return '';
+    }
+    
+    // Formata para YYYY-MM-DDTHH:mm:ss.sssZ
+    return date.toISOString();
+  }
+
   const handleSubmitForm = async (data: AccountFormData) => {
     setIsLoading(true);
     setError('');
@@ -105,24 +137,32 @@ const AccountsPage: React.FC = () => {
           name: data.name,
           currency: data.currency,
           color: data.color,
+          type: data.accountType,
           is_active: data.is_active,
           user_id: user?.id,
         };
         await accountService.updateAccount(editingAccount.id, req);
         setSuccess('Conta atualizada com sucesso!');
       } else {
-        const req: CreateAccountRequest = {
+        const message = await accountService.createAccount({
           name: data.name,
           currency: data.currency,
           color: data.color,
+          type: data.accountType,
           is_active: true,
-        };
-        await accountService.createAccount(req);
-        setSuccess('Conta criada com sucesso!');
+          due_date: formatDateToISO(data.initialDate),
+          competence_date: formatDateToISO(data.initialDate),
+          initial_value: data.initialValue,
+        });
+
+        if (message) {
+          setSuccess('Conta criada com sucesso!');
+          setShowForm(false);
+          fetchAccountsAndTransactions();
+        }
       }
-      setShowForm(false);
       setEditingAccount(null);
-      fetchAccounts();
+      fetchAccountsAndTransactions();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Erro ao salvar conta');
@@ -140,6 +180,13 @@ const AccountsPage: React.FC = () => {
     accountsByCurrency[acc.currency].push(acc);
   });
   const currencies = Object.keys(accountsByCurrency);
+
+  // Função para calcular saldo de uma conta
+  function getAccountBalance(accountId: string) {
+    return transactions
+      .filter(tx => tx.account_id === accountId && tx.is_paid !== false)
+      .reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount : -tx.amount), 0);
+  }
 
   return (
     <Layout>
@@ -168,14 +215,10 @@ const AccountsPage: React.FC = () => {
           </div>
         </div>
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
-            <p className="text-sm text-red-800">{error}</p>
-          </div>
+          <FeedbackToast message={error} type="error" onClose={() => setError('')} />
         )}
         {success && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4">
-            <p className="text-sm text-green-800">{success}</p>
-          </div>
+          <FeedbackToast message={success} type="success" onClose={() => setSuccess('')} />
         )}
         {/* Lista de contas - layout padrão do anexo */}
         <div className="mb-12">
@@ -186,30 +229,49 @@ const AccountsPage: React.FC = () => {
           ) : (
             currencies.map(currency => (
               <div key={currency} className="mb-10">
-                <div className="mb-2 ml-1 text-lg font-semibold text-gray-700">{currency}</div>
+                {/* Cabeçalho de moeda com ícone */}
+                <div className="flex items-center gap-2 mb-4 ml-1">
+                  {currency === 'BRL' && <span className="text-2xl">💳</span>}
+                  {currency === 'USD' && <span className="text-2xl">💲</span>}
+                  {currency === 'EUR' && <span className="text-2xl">💶</span>}
+                  {currency === 'GBP' && <span className="text-2xl">💷</span>}
+                  <span className="text-2xl font-bold text-gray-900">Moeda: {currency}</span>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {accountsByCurrency[currency].map(account => (
-                    <div key={account.id} className="bg-white rounded-2xl shadow flex items-center px-8 py-4 gap-6 border border-gray-100">
-                      {/* Círculo colorido da conta */}
-                      <span className="w-8 h-8 rounded-full flex-shrink-0" style={{ background: account.color || '#22c55e' }} />
-                      <span className="text-lg font-medium text-gray-900 flex-1">{account.name}</span>
-                      <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600 mr-2">{account.currency}</span>
-                      <button
-                        className="p-2 rounded hover:bg-blue-50 text-blue-600"
-                        title="Editar conta"
-                        onClick={() => handleEditAccount(account)}
-                      >
-                        <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M4 20h4.586a1 1 0 0 0 .707-.293l9.414-9.414a2 2 0 0 0 0-2.828l-2.172-2.172a2 2 0 0 0-2.828 0L4.293 15.293A1 1 0 0 0 4 16v4z" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      </button>
-                      <button
-                        className="p-2 rounded hover:bg-red-50 text-red-600"
-                        title="Excluir conta"
-                        onClick={() => handleDeleteAccount(account)}
-                      >
-                        <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3m-7 0h10" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      </button>
-                    </div>
-                  ))}
+                  {accountsByCurrency[currency].map(account => {
+                    const saldo = getAccountBalance(account.id);
+                    // Iniciais da conta
+                    const initials = account.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+                    // Tipo da conta (mock, pois não está no objeto Account)
+                    const tipo = 'Conta';
+                    return (
+                      <div key={account.id} className="bg-white rounded-2xl shadow flex flex-col px-8 py-6 gap-4 border border-gray-100 min-h-[170px] justify-between">
+                        <div className="flex items-center gap-4">
+                          {/* Círculo colorido com iniciais */}
+                          <span className="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl" style={{ background: account.color || '#22c55e' }}>{initials}</span>
+                          <div className="flex flex-col flex-1">
+                            <span className="text-lg font-bold text-gray-900">{account.name}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 justify-end mt-2">
+                          <button
+                            className="p-2 rounded hover:bg-blue-50 text-blue-600"
+                            title="Editar conta"
+                            onClick={() => handleEditAccount(account)}
+                          >
+                            <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M4 20h4.586a1 1 0 0 0 .707-.293l9.414-9.414a2 2 0 0 0 0-2.828l-2.172-2.172a2 2 0 0 0-2.828 0L4.293 15.293A1 1 0 0 0 4 16v4z" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          </button>
+                          <button
+                            className="p-2 rounded hover:bg-red-50 text-red-600"
+                            title="Excluir conta"
+                            onClick={() => handleDeleteAccount(account)}
+                          >
+                            <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3m-7 0h10" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))

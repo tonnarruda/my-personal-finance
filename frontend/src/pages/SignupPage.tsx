@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signup } from '../services/api';
+import FeedbackToast from '../components/FeedbackToast';
 
 const SignupPage: React.FC = () => {
   const [nome, setNome] = useState('');
@@ -78,7 +79,7 @@ const SignupPage: React.FC = () => {
               required
             />
           </div>
-          {erro && <div className="text-red-600 text-sm">{erro}</div>}
+          {erro && <FeedbackToast message={erro} type="error" onClose={() => setErro('')} />}
           <button
             type="submit"
             className="w-full px-8 py-4 bg-[#f1f3fe] text-[#6366f1] text-xl font-bold rounded-xl shadow hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"

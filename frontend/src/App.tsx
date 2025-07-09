@@ -43,10 +43,10 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
-        <Route path="/transacoes" element={<PrivateRoute><TransactionsPage /></PrivateRoute>} />
-        <Route path="/relatorios" element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
-        <Route path="/contas" element={<PrivateRoute><AccountsPage /></PrivateRoute>} />
-        <Route path="/categorias" element={<PrivateRoute><CategoriesPage /></PrivateRoute>} />
+        <Route path="/transactions" element={<PrivateRoute><TransactionsPage /></PrivateRoute>} />
+        <Route path="/reports" element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
+        <Route path="/accounts" element={<PrivateRoute><AccountsPage /></PrivateRoute>} />
+        <Route path="/categories" element={<PrivateRoute><CategoriesPage /></PrivateRoute>} />
         {/* Redirecionar raiz para login */}
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>

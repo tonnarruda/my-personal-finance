@@ -1,12 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Account } from '../types/account';
+import { Transaction } from '../types/transaction';
+import CurrencyInput from './CurrencyInput';
+import Select from './Select';
+import DateInput from './DateInput';
+import { accountService } from '../services/api';
 
 export interface AccountFormData {
   type: string;
+  accountType: 'income' | 'expense'; // Tipo da conta (income/expense)
   currency: string;
   name: string;
   initialDate: string;
-  initialValue: string;
+  initialValue: number;
   initialBalanceType: 'credit' | 'debit';
   color: string;
   is_active: boolean;
@@ -24,6 +30,11 @@ const typeOptions = [
   { value: 'Conta Poupança', label: 'Conta Poupança' },
   { value: 'Carteira', label: 'Carteira' },
   { value: 'Outro', label: 'Outro' },
+];
+
+const accountTypeOptions = [
+  { value: 'income', label: 'Receita' },
+  { value: 'expense', label: 'Despesa' },
 ];
 
 const currencyOptions = [
@@ -45,20 +56,16 @@ const PREDEFINED_COLORS = [
   '#f472b6', '#db2777', '#f9a8d4'
 ];
 
-const currencyPlaceholders: Record<string, string> = {
-  BRL: 'R$ 0,00',
-  EUR: '€ 0,00',
-  USD: 'US$ 0.00',
-  GBP: '£ 0.00',
-};
+
 
 const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onCancel, isLoading = false }) => {
   const [formData, setFormData] = useState<AccountFormData>({
     type: 'Conta Corrente',
+    accountType: 'income',
     currency: 'BRL',
     name: '',
     initialDate: '',
-    initialValue: '',
+    initialValue: 0,
     initialBalanceType: 'credit',
     color: PREDEFINED_COLORS[0],
     is_active: true,
@@ -67,18 +74,55 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onCancel, 
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (account) {
-      setFormData({
-        type: 'Conta Corrente',
-        currency: account.currency,
-        name: account.name,
-        initialDate: '',
-        initialValue: '',
-        initialBalanceType: 'credit',
-        color: account.color || PREDEFINED_COLORS[0],
-        is_active: account.is_active,
-      });
-    }
+    const loadAccountData = async () => {
+      if (account) {
+        // Buscar a transação inicial da conta
+        try {
+          const initialTransaction = await accountService.getInitialTransaction(account.id);
+          
+          setFormData({
+            type: 'Conta Corrente',
+            accountType: (account.type as 'income' | 'expense') || 'income',
+            currency: account.currency,
+            name: account.name,
+            initialDate: initialTransaction ? new Date(initialTransaction.due_date).toISOString().split('T')[0] : '',
+            initialValue: initialTransaction ? initialTransaction.amount / 100 : 0, // Converter de centavos para reais
+            initialBalanceType: 'credit',
+            color: account.color || PREDEFINED_COLORS[0],
+            is_active: account.is_active,
+          });
+        } catch (error) {
+          console.error('Erro ao buscar transação inicial:', error);
+          // Se não conseguir buscar a transação inicial, usar valores padrão
+          setFormData({
+            type: 'Conta Corrente',
+            accountType: (account.type as 'income' | 'expense') || 'income',
+            currency: account.currency,
+            name: account.name,
+            initialDate: '',
+            initialValue: 0,
+            initialBalanceType: 'credit',
+            color: account.color || PREDEFINED_COLORS[0],
+            is_active: account.is_active,
+          });
+        }
+      } else {
+        // Reset form when not editing
+        setFormData({
+          type: 'Conta Corrente',
+          accountType: 'income',
+          currency: 'BRL',
+          name: '',
+          initialDate: '',
+          initialValue: 0,
+          initialBalanceType: 'credit',
+          color: PREDEFINED_COLORS[0],
+          is_active: true,
+        });
+      }
+    };
+
+    loadAccountData();
   }, [account]);
 
   useEffect(() => {
@@ -104,12 +148,12 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onCancel, 
     }
   };
 
-  const handleInputChange = (field: keyof AccountFormData, value: string) => {
+  const handleInputChange = (field: keyof AccountFormData, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
   };
 
-  const valuePlaceholder = currencyPlaceholders[formData.currency] || '0,00';
+
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-3xl mx-auto bg-white rounded-2xl shadow-xl p-8">
@@ -118,29 +162,29 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onCancel, 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div>
           <label className="block text-base font-medium text-gray-700 mb-2">Tipo de Conta</label>
-          <select
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50"
+          <Select
             value={formData.type}
-            onChange={e => handleInputChange('type', e.target.value)}
+            onChange={(value) => handleInputChange('type', value)}
+            options={typeOptions}
             disabled={!!account}
-          >
-            {typeOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+          />
         </div>
         <div>
           <label className="block text-base font-medium text-gray-700 mb-2">Moeda</label>
-          <select
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50"
+          <Select
             value={formData.currency}
-            onChange={e => handleInputChange('currency', e.target.value)}
-          >
-            {currencyOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            onChange={(value) => handleInputChange('currency', value)}
+            options={currencyOptions}
+          />
         </div>
+      </div>
+      <div className="mb-6">
+        <label className="block text-base font-medium text-gray-700 mb-2">Tipo de Operação</label>
+        <Select
+          value={formData.accountType}
+          onChange={(value) => handleInputChange('accountType', value)}
+          options={accountTypeOptions}
+        />
       </div>
       <div className="mb-6">
         <label className="block text-base font-medium text-gray-700 mb-2">Nome da Conta</label>
@@ -157,22 +201,20 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onCancel, 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div>
           <label className="block text-base font-medium text-gray-700 mb-2">Data do Saldo Inicial</label>
-          <input
-            type="date"
-            className={`w-full px-4 py-3 rounded-xl border text-base focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50 ${errors.initialDate ? 'border-red-500' : 'border-gray-200'}`}
+          <DateInput
             value={formData.initialDate}
-            onChange={e => handleInputChange('initialDate', e.target.value)}
+            onChange={value => handleInputChange('initialDate', value)}
+            error={!!errors.initialDate}
           />
           {errors.initialDate && <div className="text-red-500 text-sm mt-1">{errors.initialDate}</div>}
         </div>
         <div>
           <label className="block text-base font-medium text-gray-700 mb-2">Valor do Saldo Inicial</label>
-          <input
-            type="text"
-            className={`w-full px-4 py-3 rounded-xl border text-base focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50 ${errors.initialValue ? 'border-red-500' : 'border-gray-200'}`}
-            placeholder={valuePlaceholder}
+          <CurrencyInput
             value={formData.initialValue}
-            onChange={e => handleInputChange('initialValue', e.target.value)}
+            onChange={(value) => handleInputChange('initialValue', value)}
+            currency={formData.currency}
+            error={!!errors.initialValue}
           />
           {errors.initialValue && <div className="text-red-500 text-sm mt-1">{errors.initialValue}</div>}
         </div>

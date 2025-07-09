@@ -199,3 +199,43 @@ func (h *AccountHandler) DeleteAccount(c *gin.Context) {
 		"message": "Conta removida com sucesso",
 	})
 }
+
+// GetInitialTransaction busca a transação inicial de uma conta
+func (h *AccountHandler) GetInitialTransaction(c *gin.Context) {
+	accountID := c.Param("id")
+	if accountID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "ID da conta é obrigatório",
+		})
+		return
+	}
+
+	// Obter user_id do query parameter
+	userID := c.Query("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "user_id é obrigatório",
+		})
+		return
+	}
+
+	// Validar se o ID é um UUID válido
+	if !utils.IsValidUUID(accountID) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "ID deve ser um UUID válido",
+		})
+		return
+	}
+
+	transaction, err := h.accountService.GetInitialTransaction(accountID, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"transaction": transaction,
+	})
+}

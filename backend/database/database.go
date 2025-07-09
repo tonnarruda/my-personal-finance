@@ -141,6 +141,62 @@ func (d *Database) GetCategoryByID(id string) (*structs.Category, error) {
 	return &category, nil
 }
 
+// GetCategoryByName busca uma categoria pelo nome e tipo para um usuário específico
+// Primeiro busca categorias do usuário, depois categorias padrão (user_id IS NULL)
+func (d *Database) GetCategoryByName(name string, categoryType string, userID string) (*structs.Category, error) {
+	// Primeiro tenta buscar categoria do usuário específico
+	query := `SELECT id, name, description, type, color, icon, parent_id, is_active, created_at, updated_at, user_id 
+			  FROM categories WHERE name = $1 AND type = $2 AND user_id = $3 AND deleted_at IS NULL`
+
+	var category structs.Category
+	err := d.db.QueryRow(query, name, categoryType, userID).Scan(
+		&category.ID,
+		&category.Name,
+		&category.Description,
+		&category.Type,
+		&category.Color,
+		&category.Icon,
+		&category.ParentID,
+		&category.IsActive,
+		&category.CreatedAt,
+		&category.UpdatedAt,
+		&category.UserID,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Se não encontrou categoria do usuário, busca categoria padrão
+			queryDefault := `SELECT id, name, description, type, color, icon, parent_id, is_active, created_at, updated_at, user_id 
+							FROM categories WHERE name = $1 AND type = $2 AND user_id IS NULL AND deleted_at IS NULL`
+
+			err = d.db.QueryRow(queryDefault, name, categoryType).Scan(
+				&category.ID,
+				&category.Name,
+				&category.Description,
+				&category.Type,
+				&category.Color,
+				&category.Icon,
+				&category.ParentID,
+				&category.IsActive,
+				&category.CreatedAt,
+				&category.UpdatedAt,
+				&category.UserID,
+			)
+
+			if err != nil {
+				if err == sql.ErrNoRows {
+					return nil, nil
+				}
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	return &category, nil
+}
+
 // GetAllCategories busca todas as categorias do usuário (incluindo padrão)
 func (d *Database) GetAllCategories(userID string) ([]structs.Category, error) {
 	query := `SELECT id, name, description, type, color, icon, parent_id, is_active, created_at, updated_at, deleted_at, user_id 

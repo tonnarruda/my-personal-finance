@@ -1,23 +1,15 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { logout } from '../services/auth';
+import { FiHome, FiRepeat, FiCreditCard, FiTag, FiBarChart2, FiSettings, FiLogOut } from 'react-icons/fi';
 
 const menuItems = [
-  { label: 'Dashboard', to: '/dashboard', icon: (
-    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M13 5v6h6m-6 0H7m6 0v6m0 0h6m-6 0H7"/></svg>
-  ) },
-  { label: 'Transações', to: '/transacoes', icon: (
-    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-  ) },
-  { label: 'Contas', to: '/contas', icon: (
-    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3v4M8 3v4"/></svg>
-  ) },
-  { label: 'Relatórios', to: '/relatorios', icon: (
-    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 17v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/><path d="M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/></svg>
-  ) },
-  { label: 'Configurações', to: '/configuracoes', icon: (
-    <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
-  ), disabled: true },
+  { label: 'Dashboard', to: '/dashboard', icon: <FiHome className="w-5 h-5 mr-3" /> },
+  { label: 'Transações', to: '/transactions', icon: <FiRepeat className="w-5 h-5 mr-3" /> },
+  { label: 'Contas', to: '/accounts', icon: <FiCreditCard className="w-5 h-5 mr-3" /> },
+  { label: 'Categorias', to: '/categories', icon: <FiTag className="w-5 h-5 mr-3" /> },
+  { label: 'Relatórios', to: '/reports', icon: <FiBarChart2 className="w-5 h-5 mr-3" /> },
+  { label: 'Configurações', to: '/configuration', icon: <FiSettings className="w-5 h-5 mr-3" />, disabled: true },
 ];
 
 const Sidebar: React.FC = () => {
@@ -62,7 +54,7 @@ const Sidebar: React.FC = () => {
       </div>
       <div className="px-2">
         <button onClick={logout} className="flex items-center gap-2 text-gray-400 hover:text-indigo-600 text-base font-medium px-4 py-2 rounded-lg transition-colors w-full">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7"/></svg>
+          <FiLogOut className="w-5 h-5" />
           Sair
         </button>
       </div>
