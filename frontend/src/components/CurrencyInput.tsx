@@ -50,7 +50,7 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
 
   // Formata número para exibição
   const formatForDisplay = (num: number): string => {
-    if (isNaN(num) || num === 0) return '';
+    if (isNaN(num)) return '';
     if (currency === 'BRL' || currency === 'EUR') {
       return num.toLocaleString('pt-BR', {
         minimumFractionDigits: 2,

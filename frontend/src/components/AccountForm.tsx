@@ -135,7 +135,7 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onCancel, 
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim()) newErrors.name = 'Nome da conta é obrigatório';
     if (!formData.initialDate && !account) newErrors.initialDate = 'Data do saldo inicial é obrigatória';
-    if (!formData.initialValue && !account) newErrors.initialValue = 'Valor do saldo inicial é obrigatório';
+    if (formData.initialValue === undefined || formData.initialValue === null) newErrors.initialValue = 'Valor do saldo inicial é obrigatório';
     if (!formData.color) newErrors.color = 'Cor é obrigatória';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
