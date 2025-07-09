@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../services/api';
 import { setUser } from '../services/auth';
-import FeedbackToast from '../components/FeedbackToast';
+import { useToast } from '../contexts/ToastContext';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [erro, setErro] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { showError } = useToast();
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -17,9 +17,8 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErro('');
     if (!email || !senha) {
-      setErro('Preencha todos os campos.');
+      showError('Preencha todos os campos.');
       return;
     }
     setLoading(true);
@@ -28,7 +27,7 @@ const LoginPage: React.FC = () => {
       setUser(user);
       navigate('/dashboard');
     } catch (err: any) {
-      setErro(err?.response?.data?.erro || 'Erro ao fazer login.');
+      showError(err?.response?.data?.erro || 'Erro ao fazer login.');
     } finally {
       setLoading(false);
     }
@@ -65,7 +64,6 @@ const LoginPage: React.FC = () => {
               required
             />
           </div>
-          {erro && <FeedbackToast message={erro} type="error" onClose={() => setErro('')} />}
           <button
             type="submit"
             className="w-full px-8 py-4 bg-[#f1f3fe] text-[#6366f1] text-xl font-bold rounded-xl shadow hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"

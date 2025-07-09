@@ -8,6 +8,8 @@ import AccountsPage from './pages/AccountsPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import { isAuthenticated } from './services/auth';
+import { ToastProvider } from './contexts/ToastContext';
+import ToastContainer from './components/ToastContainer';
 import './App.css';
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
@@ -38,19 +40,22 @@ function PrivateRoute({ children }: { children: JSX.Element }) {
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
-        <Route path="/transactions" element={<PrivateRoute><TransactionsPage /></PrivateRoute>} />
-        <Route path="/reports" element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
-        <Route path="/accounts" element={<PrivateRoute><AccountsPage /></PrivateRoute>} />
-        <Route path="/categories" element={<PrivateRoute><CategoriesPage /></PrivateRoute>} />
-        {/* Redirecionar raiz para login */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </Router>
+    <ToastProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
+          <Route path="/transactions" element={<PrivateRoute><TransactionsPage /></PrivateRoute>} />
+          <Route path="/reports" element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
+          <Route path="/accounts" element={<PrivateRoute><AccountsPage /></PrivateRoute>} />
+          <Route path="/categories" element={<PrivateRoute><CategoriesPage /></PrivateRoute>} />
+          {/* Redirecionar raiz para login */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+        </Routes>
+        <ToastContainer />
+      </Router>
+    </ToastProvider>
   );
 }
 

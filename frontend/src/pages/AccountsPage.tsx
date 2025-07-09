@@ -4,21 +4,20 @@ import { accountService } from '../services/api';
 import { CreateAccountRequest, UpdateAccountRequest, Account } from '../types/account';
 import { getUser } from '../services/auth';
 import Layout from '../components/Layout';
-import FeedbackToast from '../components/FeedbackToast';
 import { transactionService, categoryService, getOrCreateCategoryByName } from '../services/api';
 import { Transaction } from '../types/transaction';
+import { useToast } from '../contexts/ToastContext';
 
 const AccountsPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [success, setSuccess] = useState('');
-  const [error, setError] = useState('');
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [deletingAccount, setDeletingAccount] = useState<Account | null>(null);
   const [showInactive, setShowInactive] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const { showSuccess, showError } = useToast();
 
   const fetchAccountsAndTransactions = async () => {
     setLoadingAccounts(true);
@@ -30,7 +29,7 @@ const AccountsPage: React.FC = () => {
       setAccounts(accs);
       setTransactions(Array.isArray(txs) ? txs : []);
     } catch (err: any) {
-      setError('Erro ao carregar contas ou transações');
+      showError('Erro ao carregar contas ou transações');
     } finally {
       setLoadingAccounts(false);
     }
@@ -83,16 +82,13 @@ const AccountsPage: React.FC = () => {
   const confirmDeleteAccount = async () => {
     if (!deletingAccount) return;
     setIsLoading(true);
-    setError('');
-    setSuccess('');
     try {
       await accountService.deleteAccount(deletingAccount.id);
-      setSuccess('Conta excluída com sucesso!');
+      showSuccess('Conta excluída com sucesso!');
       setDeletingAccount(null);
       fetchAccountsAndTransactions();
-      setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
-      setError(err?.response?.data?.error || 'Erro ao excluir conta');
+      showError(err?.response?.data?.error || 'Erro ao excluir conta');
     } finally {
       setIsLoading(false);
     }
@@ -128,8 +124,6 @@ const AccountsPage: React.FC = () => {
 
   const handleSubmitForm = async (data: AccountFormData) => {
     setIsLoading(true);
-    setError('');
-    setSuccess('');
     const user = getUser();
     try {
       if (editingAccount) {
@@ -142,7 +136,7 @@ const AccountsPage: React.FC = () => {
           user_id: user?.id,
         };
         await accountService.updateAccount(editingAccount.id, req);
-        setSuccess('Conta atualizada com sucesso!');
+        showSuccess('Conta atualizada com sucesso!');
       } else {
         const message = await accountService.createAccount({
           name: data.name,
@@ -156,16 +150,15 @@ const AccountsPage: React.FC = () => {
         });
 
         if (message) {
-          setSuccess('Conta criada com sucesso!');
+          showSuccess('Conta criada com sucesso!');
           setShowForm(false);
           fetchAccountsAndTransactions();
         }
       }
       setEditingAccount(null);
       fetchAccountsAndTransactions();
-      setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
-      setError(err?.response?.data?.error || 'Erro ao salvar conta');
+      showError(err?.response?.data?.error || 'Erro ao salvar conta');
     } finally {
       setIsLoading(false);
     }
@@ -222,12 +215,6 @@ const AccountsPage: React.FC = () => {
       {/* Espaço para não sobrepor o conteúdo */}
       <div className="h-[110px]"></div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {error && (
-          <FeedbackToast message={error} type="error" onClose={() => setError('')} />
-        )}
-        {success && (
-          <FeedbackToast message={success} type="success" onClose={() => setSuccess('')} />
-        )}
         {/* Lista de contas - layout padrão do anexo */}
         <div className="mb-12">
           {loadingAccounts ? (
