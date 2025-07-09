@@ -9,13 +9,13 @@ import (
 
 const (
 	BACKEND_URL = "https://my-personal-finance.onrender.com/health"
-	INTERVAL    = 30 * time.Second
+	INTERVAL    = 5 * time.Second
 )
 
 func getBackendURL() string {
 	if url := os.Getenv("REACT_APP_API_BASE_URL"); url != "" {
 		// Substitui /api por /health
-		return url[:len(url)-4] + "/health"
+		return url[:len(url)-4]
 	}
 	return BACKEND_URL
 }
