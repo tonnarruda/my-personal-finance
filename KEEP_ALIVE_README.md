@@ -1,6 +1,6 @@
 # Keep-Alive Service (Go)
 
-Este serviço mantém o backend no Render "acordado" fazendo ping no health check a cada minuto e enviando logs para o backend.
+Este serviço mantém o backend no Render "acordado" fazendo GET no health check a cada 5 segundos.
 
 ## Como usar
 
@@ -40,19 +40,18 @@ REACT_APP_API_BASE_URL=https://my-personal-finance.onrender.com/api
   - Padrão: "production"
 
 ### Intervalo
-- Padrão: 20 segundos
+- Padrão: 5 segundos
 - Para alterar, edite `INTERVAL` no arquivo `keep-alive.go`
 
 ## Logs
 
-O script mostra logs detalhados e envia para o backend:
+O script mostra logs detalhados:
 ```
 🚀 Starting keep-alive service for https://my-personal-finance.onrender.com/health
-⏰ Interval: 20 seconds
+⏰ Interval: 5 seconds
 📅 Started at: 2024-01-15 10:30:00
 🌍 Environment: production
 [2024-01-15 10:30:00] ✅ Health check: 200 OK (0.15s)
-[2024-01-15 10:30:00] 📝 Log sent to backend successfully
 ```
 
 ## Parar o serviço
