@@ -167,8 +167,12 @@ const CategoriesPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-8">
+      {/* Bloco fixo no topo, alinhado ao conteúdo principal */}
+      <div
+        className="fixed top-0 left-64 w-[calc(100vw-16rem)] bg-white shadow z-50 px-4 sm:px-6 lg:px-8 pt-8 pb-4 flex flex-col"
+        style={{ minHeight: 110 }}
+      >
+        <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-4xl font-extrabold text-gray-900">Categorias</h1>
             <p className="mt-2 text-lg text-gray-600">Gerencie as categorias de suas transações</p>
@@ -188,15 +192,16 @@ const CategoriesPage: React.FC = () => {
                 setShowForm(true);
                 setEditingCategory(undefined);
               }}
-              className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150
-               bg-[#f1f3fe] text-[#6366f1] 
-               hover:bg-indigo-100 hover:text-indigo-800
-               focus:outline-none focus:ring-2 focus:ring-blue-700"
+              className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
             >
               + Nova Categoria
             </button>
           </div>
         </div>
+      </div>
+      {/* Espaço para não sobrepor o conteúdo */}
+      <div className="h-[110px]"></div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
             <p className="text-sm text-red-800">{error}</p>

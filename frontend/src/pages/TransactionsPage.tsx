@@ -398,8 +398,12 @@ const TransactionsPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-8">
+      {/* Bloco fixo no topo, alinhado ao conteúdo principal */}
+      <div
+        className="fixed top-0 left-64 w-[calc(100vw-16rem)] bg-white shadow z-50 px-4 sm:px-6 lg:px-8 pt-8 pb-4 flex flex-col"
+        style={{ minHeight: 160 }}
+      >
+        <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-4xl font-extrabold text-gray-900">Transações</h1>
             <p className="mt-2 text-lg text-gray-600">Gerencie suas transações financeiras</p>
@@ -411,11 +415,8 @@ const TransactionsPage: React.FC = () => {
             + Nova Transação
           </button>
         </div>
-        {feedback && (
-          <FeedbackToast message={feedback.message} type={feedback.type} onClose={() => setFeedback(null)} />
-        )}
         {/* Tabs de currency */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-4">
           {currencies.map(cur => (
             <button
               key={cur}
@@ -426,16 +427,19 @@ const TransactionsPage: React.FC = () => {
             </button>
           ))}
         </div>
-        {/* Navegação de mês e botão nova transação */}
-        <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
-          <div className="flex-1 flex flex-col items-center sm:items-start">
-            <div className="flex items-center justify-center gap-6 w-full mb-2">
-              <button className="text-2xl text-gray-400 hover:text-gray-600 transition" onClick={handlePrevMonth}>{'<'}</button>
-              <span className="text-xl font-bold text-gray-900">{monthNames[selectedMonthYear.month - 1]} {selectedMonthYear.year}</span>
-              <button className="text-2xl text-gray-400 hover:text-gray-600 transition" onClick={handleNextMonth}>{'>'}</button>
-            </div>
-          </div>
+        {/* Seletor de mês fixo */}
+        <div className="flex items-center justify-center gap-6 w-full mb-2">
+          <button className="text-2xl text-gray-400 hover:text-gray-600 transition" onClick={handlePrevMonth}>{'<'}</button>
+          <span className="text-xl font-bold text-gray-900">{monthNames[selectedMonthYear.month - 1]} {selectedMonthYear.year}</span>
+          <button className="text-2xl text-gray-400 hover:text-gray-600 transition" onClick={handleNextMonth}>{'>'}</button>
         </div>
+      </div>
+      {/* Espaço para não sobrepor o conteúdo */}
+      <div className="h-[250px]"></div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {feedback && (
+          <FeedbackToast message={feedback.message} type={feedback.type} onClose={() => setFeedback(null)} />
+        )}
         {/* Filtros */}
         <div className="flex flex-wrap gap-6 items-end mb-2">
           <div>

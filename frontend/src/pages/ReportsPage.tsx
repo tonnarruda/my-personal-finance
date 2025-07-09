@@ -8,9 +8,18 @@ const ReportsPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 className="text-4xl font-extrabold text-gray-900 mb-4">Relatórios</h1>
+      {/* Bloco fixo no topo, alinhado ao conteúdo principal */}
+      <div
+        className="fixed top-0 left-64 w-[calc(100vw-16rem)] bg-white shadow z-50 px-4 sm:px-6 lg:px-8 pt-8 pb-4 flex flex-col"
+        style={{ minHeight: 110 }}
+      >
+        <h1 className="text-4xl font-extrabold text-gray-900 mb-2">Relatórios</h1>
         <p className="text-lg text-gray-600">Aqui você pode visualizar relatórios detalhados das suas finanças.</p>
+      </div>
+      {/* Espaço para não sobrepor o conteúdo */}
+      <div className="h-[110px]"></div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* O restante do conteúdo permanece igual */}
       </div>
     </Layout>
   );
