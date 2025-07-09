@@ -40,15 +40,15 @@ REACT_APP_API_BASE_URL=https://my-personal-finance.onrender.com/api
   - Padrão: "production"
 
 ### Intervalo
-- Padrão: 60 segundos (1 minuto)
-- Para alterar, edite `INTERVAL_MS` no arquivo `keep-alive.js`
+- Padrão: 20 segundos
+- Para alterar, edite `INTERVAL` no arquivo `keep-alive.go`
 
 ## Logs
 
 O script mostra logs detalhados e envia para o backend:
 ```
 🚀 Starting keep-alive service for https://my-personal-finance.onrender.com/health
-⏰ Interval: 60 seconds
+⏰ Interval: 20 seconds
 📅 Started at: 2024-01-15 10:30:00
 🌍 Environment: production
 [2024-01-15 10:30:00] ✅ Health check: 200 OK (0.15s)

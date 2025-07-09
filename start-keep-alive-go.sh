@@ -3,7 +3,7 @@
 echo "🚀 Starting keep-alive service (Go) for backend..."
 echo "📅 Started at: $(date)"
 echo "🔗 Backend URL: Will use REACT_APP_API_BASE_URL or fallback to https://my-personal-finance.onrender.com/health"
-echo "⏰ Interval: 60 seconds"
+echo "⏰ Interval: 20 seconds"
 echo "📝 Logs will be sent to backend"
 echo ""
 

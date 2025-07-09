@@ -13,7 +13,7 @@ import (
 const (
 	BACKEND_URL = "https://my-personal-finance.onrender.com/health"
 	LOG_URL     = "https://my-personal-finance.onrender.com/api/keep-alive-logs"
-	INTERVAL    = 60 * time.Second
+	INTERVAL    = 20 * time.Second
 )
 
 type KeepAliveLog struct {
