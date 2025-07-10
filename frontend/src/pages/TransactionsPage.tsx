@@ -526,7 +526,7 @@ const TransactionsPage: React.FC = () => {
       {/* Bloco fixo no topo, alinhado ao conteúdo principal */}
       <div
         className="fixed top-0 left-64 w-[calc(100vw-16rem)] bg-white shadow z-50 px-4 sm:px-6 lg:px-8 pt-8 pb-4 flex flex-col"
-        style={{ minHeight: 160 }}
+        style={{ minHeight: 200 }}
       >
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -552,18 +552,48 @@ const TransactionsPage: React.FC = () => {
             </button>
           ))}
         </div>
-        {/* Seletor de mês com dropdown */}
-        <div className="flex items-center justify-center gap-4 w-full mb-2 select-none relative">
-          <button
-            className="p-2 rounded-full hover:bg-indigo-100 active:scale-90 transition group shadow-sm"
-            onClick={handlePrevMonth}
-            aria-label="Mês anterior"
-            title="Mês anterior"
-          >
-            <svg className="w-8 h-8 text-gray-400 group-hover:text-indigo-600 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
+        {/* Linha com filtros e seletor de mês */}
+        <div className="flex items-center justify-between gap-6 w-full mb-2">
+          {/* Filtros à esquerda */}
+          <div className="flex gap-4 items-end">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Banco</label>
+              <Select
+                value={selectedBank}
+                onChange={val => setSelectedBank(val)}
+                options={[
+                  { value: '', label: 'Todos' },
+                  ...(accountsByCurrency[selectedCurrency]?.map(acc => ({ value: acc.id, label: acc.name })) || [])
+                ]}
+                className="min-w-[120px]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+              <Select
+                value={selectedCategory}
+                onChange={val => setSelectedCategory(val)}
+                options={[
+                  { value: '', label: 'Todas' },
+                  ...categories.map(cat => ({ value: cat.id, label: cat.name }))
+                ]}
+                className="min-w-[120px]"
+              />
+            </div>
+          </div>
+
+          {/* Seletor de mês no centro */}
+          <div className="flex items-center gap-4 select-none relative">
+            <button
+              className="p-2 rounded-full hover:bg-indigo-100 active:scale-90 transition group shadow-sm"
+              onClick={handlePrevMonth}
+              aria-label="Mês anterior"
+              title="Mês anterior"
+            >
+              <svg className="w-8 h-8 text-gray-400 group-hover:text-indigo-600 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
           
           {/* Botão principal do mês com dropdown */}
           <div className="relative">
@@ -672,53 +702,29 @@ const TransactionsPage: React.FC = () => {
             )}
           </div>
           
-          <button
-            className="p-2 rounded-full hover:bg-indigo-100 active:scale-90 transition group shadow-sm"
-            onClick={handleNextMonth}
-            aria-label="Próximo mês"
-            title="Próximo mês"
-          >
-            <svg className="w-8 h-8 text-gray-400 group-hover:text-indigo-600 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-      </div>
-      {/* Espaço para não sobrepor o conteúdo */}
-      <div className="h-[250px]"></div>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Filtros */}
-        <div className="flex flex-wrap gap-6 items-end mb-2">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Banco</label>
-            <Select
-              value={selectedBank}
-              onChange={val => setSelectedBank(val)}
-              options={[
-                { value: '', label: 'Todos' },
-                ...(accountsByCurrency[selectedCurrency]?.map(acc => ({ value: acc.id, label: acc.name })) || [])
-              ]}
-              className="min-w-[120px]"
-            />
+            <button
+              className="p-2 rounded-full hover:bg-indigo-100 active:scale-90 transition group shadow-sm"
+              onClick={handleNextMonth}
+              aria-label="Próximo mês"
+              title="Próximo mês"
+            >
+              <svg className="w-8 h-8 text-gray-400 group-hover:text-indigo-600 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-            <Select
-              value={selectedCategory}
-              onChange={val => setSelectedCategory(val)}
-              options={[
-                { value: '', label: 'Todas' },
-                ...categories.map(cat => ({ value: cat.id, label: cat.name }))
-              ]}
-              className="min-w-[120px]"
-            />
-          </div>
-          <div className="ml-auto text-base text-gray-700 font-medium">
+
+          {/* Saldo anterior à direita */}
+          <div className="text-base text-gray-700 font-medium">
             Saldo anterior: <span className="font-bold">
               {saldoAnterior.toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency })}
             </span>
           </div>
         </div>
+      </div>
+      {/* Espaço para não sobrepor o conteúdo */}
+      <div className="h-[230px]"></div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Tabela de transações agrupada por data */}
         <div className="bg-white rounded-2xl shadow mt-6">
           {sortedDates.length === 0 && (
