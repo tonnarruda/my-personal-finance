@@ -66,7 +66,7 @@ const ModernMetrics: React.FC<ModernMetricsProps> = ({
             <span className="text-gray-300">Diferença:</span> {formatCurrency(Math.abs(currentValue - previousValue))}
           </div>
           <div className="font-semibold">
-            {arrow} {changeText} de {Math.abs(change).toFixed(1)}%
+            {arrow} {changeText} de {Math.abs(change).toFixed(2)}%
           </div>
         </div>
       );
@@ -176,7 +176,7 @@ const ModernMetrics: React.FC<ModernMetricsProps> = ({
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17l7-7 7 7" />
                       </svg>
-                      {Math.abs(metric.change).toFixed(1)}%
+                      {Math.abs(metric.change).toFixed(2)}%
                     </div>
                     
                     {activeTooltip === metric.label && (

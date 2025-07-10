@@ -50,7 +50,7 @@ const ModernResultCard: React.FC<ModernResultCardProps> = ({
             <span className="text-gray-300">Diferença:</span> {formatCurrency(Math.abs(resultado - resultadoMesAnterior))}
           </div>
           <div className="font-semibold">
-            {arrow} {changeText} de {Math.abs(percentChange).toFixed(1)}%
+            {arrow} {changeText} de {Math.abs(percentChange).toFixed(2)}%
           </div>
         </div>
       );
@@ -90,7 +90,7 @@ const ModernResultCard: React.FC<ModernResultCardProps> = ({
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17l7-7 7 7" />
                 </svg>
-                {Math.abs(percentChange).toFixed(1)}%
+                {Math.abs(percentChange).toFixed(2)}%
               </div>
               
               {showTooltip && (
@@ -118,7 +118,7 @@ const ModernResultCard: React.FC<ModernResultCardProps> = ({
             {formatCurrency(Math.abs(resultado))}
           </div>
           <div className="text-sm text-gray-500">
-            {isPositive ? 'Superávit' : 'Déficit'} • {Math.abs(resultadoPercent).toFixed(1)}% das receitas
+            {isPositive ? 'Superávit' : 'Déficit'} • {Math.abs(resultadoPercent).toFixed(2)}% das receitas
           </div>
         </div>
 
@@ -126,7 +126,7 @@ const ModernResultCard: React.FC<ModernResultCardProps> = ({
         <div className="mb-4">
           <div className="flex justify-between text-xs text-gray-500 mb-2">
             <span>Eficiência Financeira</span>
-            <span>{Math.max(0, 100 - despesasPercent).toFixed(1)}%</span>
+            <span>{Math.max(0, 100 - despesasPercent).toFixed(2)}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div 
