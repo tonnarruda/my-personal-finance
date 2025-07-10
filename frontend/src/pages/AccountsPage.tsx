@@ -137,6 +137,7 @@ const AccountsPage: React.FC = () => {
         };
         await accountService.updateAccount(editingAccount.id, req);
         showSuccess('Conta atualizada com sucesso!');
+        setShowForm(false);
       } else {
         const message = await accountService.createAccount({
           name: data.name,
