@@ -282,9 +282,6 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6 md:p-10 relative mx-auto flex flex-col gap-4 md:gap-6" style={{minWidth: 0}}>
-      <button type="button" className="absolute top-6 right-8 text-gray-400 hover:text-gray-600 text-3xl" onClick={onCancel}>
-        &times;
-      </button>
       <h2 className="text-2xl font-bold text-gray-900 mb-2 md:mb-4 text-center">
         {id ? 'Editar transação' : `Nova ${form.type === 'income' ? 'receita' : 'despesa'}`}
       </h2>
@@ -450,17 +447,23 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
       <div className="flex flex-col items-center mb-4 md:mb-6">
         <textarea className="w-full mt-2 px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50 text-center" rows={2} placeholder="Observação (opcional)" value={form.observation} onChange={e => handleChange('observation', e.target.value)} />
       </div>
-      {/* Botão de submit */}
-      <div className="flex justify-center mt-4 md:mt-6">
-        <button 
-          ref={submitButtonRef}
-          type="submit" 
-          className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center text-white text-4xl shadow-lg hover:bg-green-600 transition disabled:opacity-60" 
-          disabled={isLoading || submitting}
-        >
-          ✓
-        </button>
-      </div>
+      {/* Botões de ação */}
+      <button
+        ref={submitButtonRef}
+        type="submit"
+        className="w-full py-4 rounded-xl text-lg font-bold bg-[#f1f3fe] text-[#6366f1] shadow hover:bg-indigo-100 transition disabled:opacity-50 mt-2"
+        disabled={isLoading || submitting}
+      >
+        {id ? 'Salvar' : (form.type === 'income' ? 'Adicionar Receita' : 'Adicionar Despesa')}
+      </button>
+      <button
+        type="button"
+        className="w-full py-4 rounded-xl text-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition mt-3"
+        onClick={onCancel}
+        disabled={isLoading || submitting}
+      >
+        Cancelar
+      </button>
     </form>
   );
 };
