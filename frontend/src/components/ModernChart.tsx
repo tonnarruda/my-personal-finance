@@ -44,6 +44,7 @@ const ModernChart: React.FC<ModernChartProps> = ({
   const despesasBarY = padding + chartHeight - despesasHeight;
   
   const resultado = data.receitas - data.despesas;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const resultadoColor = resultado >= 0 ? '#22c55e' : '#ef4444';
   
   const formatCurrency = (value: number) => {

@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TransactionType, CreateTransactionRequest } from '../types/transaction';
-import { transactionService, accountService, categoryService } from '../services/api';
-import { getUser } from '../services/auth';
+import { accountService, categoryService } from '../services/api';
 import DateInput from './DateInput';
 import CurrencyInput from './CurrencyInput';
-import Select from './Select';
 import CategorySelect from './CategorySelect';
 import AccountSelect from './AccountSelect';
 import { ThumbsUp, Infinity, Repeat2 } from 'lucide-react';
@@ -67,7 +65,6 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isPaid, setIsPaid] = useState(false);
-  const [isFixed, setIsFixed] = useState(false);
   const [repeatType, setRepeatType] = useState<'none' | 'fixed' | 'parcel'>('none');
   const [repeatCount, setRepeatCount] = useState(2);
   const [repeatPeriod, setRepeatPeriod] = useState<'days' | 'weeks' | 'months' | 'years'>('months');
@@ -111,7 +108,6 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
     }
     // Em modo de edição, sempre iniciar toggles como false
     if (id) {
-      setIsFixed(false);
       setRepeatType('none');
     }
   }, [id, type, description, amount, due_date, competence_date, account_id, category_id, observation, repeat_type, repeat_count, repeat_period, typeDefault, initialIsPaid]);
@@ -199,12 +195,6 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
-  // Converter datas para o formato ISO completo
-  function toISODate(dateStr: string) {
-    if (!dateStr) return undefined;
-    return dateStr.length === 10 ? `${dateStr}T00:00:00Z` : dateStr;
-  }
 
   // Função para converter data ISO para YYYY-MM-DD
   function toDateInputValue(dateStr: string | undefined) {

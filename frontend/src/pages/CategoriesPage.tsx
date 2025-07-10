@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Category, CategoryWithSubcategories, CreateCategoryRequest, UpdateCategoryRequest } from '../types/category';
+import { Category, CreateCategoryRequest, UpdateCategoryRequest } from '../types/category';
 import { categoryService } from '../services/api';
 import CategoryList from '../components/CategoryList';
 import CategoryForm from '../components/CategoryForm';

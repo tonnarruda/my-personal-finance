@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import AccountForm, { AccountFormData } from '../components/AccountForm';
 import { accountService } from '../services/api';
-import { CreateAccountRequest, UpdateAccountRequest, Account } from '../types/account';
+import { UpdateAccountRequest, Account } from '../types/account';
 import { getUser } from '../services/auth';
 import Layout from '../components/Layout';
-import { transactionService, categoryService, getOrCreateCategoryByName } from '../services/api';
+import { transactionService } from '../services/api';
 import { Transaction } from '../types/transaction';
 import { useToast } from '../contexts/ToastContext';
 

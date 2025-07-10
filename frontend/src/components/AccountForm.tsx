@@ -1,8 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Account } from '../types/account';
-import { Transaction } from '../types/transaction';
 import CurrencyInput from './CurrencyInput';
-import Select from './Select';
 import ElegantSelect from './ElegantSelect';
 import DateInput from './DateInput';
 import { accountService } from '../services/api';

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Category, CreateCategoryRequest, UpdateCategoryRequest, CategoryType } from '../types/category';
-import Select from './Select';
 import ElegantSelect from './ElegantSelect';
 
 interface CategoryFormProps {

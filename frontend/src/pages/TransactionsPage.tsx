@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import TransactionForm from '../components/TransactionForm';
 import Select from '../components/Select';
+import DateInput from '../components/DateInput';
 import { accountService, transactionService, categoryService } from '../services/api';
 import { Transaction } from '../types/transaction';
 import { getUser } from '../services/auth';
@@ -24,7 +25,6 @@ function hexToRgba(hex: string, alpha: number) {
 }
 
 const TransactionsPage: React.FC = () => {
-  const [selectedMonth, setSelectedMonth] = useState('julho 2025');
   // Garanta que o valor inicial dos filtros seja ''
   const [selectedBank, setSelectedBank] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -33,7 +33,6 @@ const TransactionsPage: React.FC = () => {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const today = new Date();
   const [selectedMonthYear, setSelectedMonthYear] = useState({
@@ -77,7 +76,6 @@ const TransactionsPage: React.FC = () => {
   });
 
   const fetchData = async () => {
-    setLoading(true);
     try {
       const [accs, txs, cats] = await Promise.all([
         accountService.getAllAccounts(),
@@ -91,8 +89,6 @@ const TransactionsPage: React.FC = () => {
       setAccounts([]);
       setTransactions([]);
       setCategories([]);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -159,8 +155,7 @@ const TransactionsPage: React.FC = () => {
   const datasDoMes = transactionsForCurrencySorted.map(t => parseDateString(t.due_date)).filter(Boolean);
   const primeiraDataDoMes = datasDoMes.length > 0 ? new Date(Math.min(...datasDoMes.map(d => d!.getTime()))) : null;
 
-  // Map de id para nome da categoria
-  const categoryIdToName = Object.fromEntries(categories.map(cat => [cat.id, cat.name]));
+
 
   const handleOpenForm = () => {
     setEditingTransaction(null);
@@ -295,7 +290,7 @@ const TransactionsPage: React.FC = () => {
     if (!d) return '-';
     // Se vier no formato YYYY-MM-DD, extrai direto
     if (dateStr && /^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-      const [, year, month] = dateStr.match(/^(\d{4})-(\d{2})-/) || [];
+      const [_unused, year, month] = dateStr.match(/^(\d{4})-(\d{2})-/) || [];
       if (year && month) return `${month}/${year}`;
     }
     return `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
@@ -513,6 +508,15 @@ const TransactionsPage: React.FC = () => {
     return `${monthNames[selectedMonthYear.month - 1]} ${selectedMonthYear.year}`;
   };
 
+  // Funções helper para conversão de datas para o DateInput
+  const handleCustomStartDateChange = (value: string) => {
+    setCustomStartDate(value);
+  };
+
+  const handleCustomEndDateChange = (value: string) => {
+    setCustomEndDate(value);
+  };
+
   return (
     <Layout>
       {/* Bloco fixo no topo, alinhado ao conteúdo principal */}
@@ -621,20 +625,20 @@ const TransactionsPage: React.FC = () => {
                   <div className="mt-3 space-y-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Data inicial</label>
-                      <input
-                        type="date"
+                      <DateInput
                         value={customStartDate}
-                        onChange={(e) => setCustomStartDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        onChange={handleCustomStartDateChange}
+                        placeholder="DD/MM/AAAA"
+                        className="text-sm"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Data final</label>
-                      <input
-                        type="date"
+                      <DateInput
                         value={customEndDate}
-                        onChange={(e) => setCustomEndDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        onChange={handleCustomEndDateChange}
+                        placeholder="DD/MM/AAAA"
+                        className="text-sm"
                       />
                     </div>
                     <div className="flex gap-2">
