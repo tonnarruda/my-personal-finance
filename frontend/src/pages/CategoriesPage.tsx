@@ -215,8 +215,8 @@ const CategoriesPage: React.FC = () => {
         </div>
         {/* Formulário lateral/modal */}
         {(showForm || editingCategory) && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-            <div className="bg-white rounded-3xl shadow-2xl p-10 w-full max-w-3xl md:max-w-4xl relative">
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto relative">
               <button
                 onClick={handleCancelForm}
                 className="absolute top-6 right-8 text-gray-400 hover:text-gray-600 text-3xl"
@@ -237,7 +237,7 @@ const CategoriesPage: React.FC = () => {
         )}
         {/* Modal de confirmação de exclusão */}
         {categoryToDelete && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
               <h2 className="text-xl font-bold mb-4">Excluir categoria</h2>
               <p className="mb-6">Tem certeza que deseja excluir a categoria <span className="font-semibold">{categoryToDelete.name}</span>?</p>

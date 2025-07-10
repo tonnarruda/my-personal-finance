@@ -812,13 +812,22 @@ const TransactionsPage: React.FC = () => {
         </div>
         {/* Modal de formulário de transação */}
         {showForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-            <TransactionForm onSubmit={handleSubmitForm} onCancel={handleCloseForm} currency={selectedCurrency} {...(editingTransaction ? { ...editingTransaction } : {})} />
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-6xl max-h-[90vh] overflow-y-auto relative">
+              <button
+                onClick={handleCloseForm}
+                className="absolute top-6 right-8 text-gray-400 hover:text-gray-600 text-3xl"
+                title="Fechar"
+              >
+                &times;
+              </button>
+              <TransactionForm onSubmit={handleSubmitForm} onCancel={handleCloseForm} currency={selectedCurrency} {...(editingTransaction ? { ...editingTransaction } : {})} />
+            </div>
           </div>
         )}
         {/* Modal de confirmação de exclusão de transação */}
         {transactionToDelete && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
               <h2 className="text-xl font-bold mb-4">Excluir transação</h2>
               <p className="mb-6">Tem certeza que deseja excluir a transação <span className="font-semibold">{transactionToDelete.description}</span>?</p>

@@ -5,7 +5,7 @@ import DateInput from './DateInput';
 import CurrencyInput from './CurrencyInput';
 import CategorySelect from './CategorySelect';
 import AccountSelect from './AccountSelect';
-import { ThumbsUp, Infinity, Repeat2 } from 'lucide-react';
+import { Infinity, Repeat2 } from 'lucide-react';
 
 interface TransactionFormProps {
   typeDefault?: TransactionType;
@@ -78,7 +78,7 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const submitButtonRef = useRef<HTMLButtonElement>(null);
-  const descriptionInputRef = useRef<HTMLInputElement>(null);
+
 
   useEffect(() => {
     setForm({
@@ -141,12 +141,7 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
     }
   }, [currency, accounts, form.account_id]);
 
-  // Focar no input de descrição quando o modal abrir
-  useEffect(() => {
-    if (descriptionInputRef.current) {
-      descriptionInputRef.current.focus();
-    }
-  }, []);
+
 
   // Handler para ESC
   useEffect(() => {
@@ -271,33 +266,33 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
 
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6 md:p-10 relative mx-auto flex flex-col gap-4 md:gap-6" style={{minWidth: 0}}>
-      <h2 className="text-2xl font-bold text-gray-900 mb-2 md:mb-4 text-center">
-        {id ? 'Editar transação' : `Nova ${form.type === 'income' ? 'receita' : 'despesa'}`}
-      </h2>
-      {/* Tipo */}
-      <div className="flex gap-2 md:gap-4 mb-2 md:mb-4 justify-center">
-        <button type="button" onClick={() => handleChange('type', 'income')} className={`flex-1 px-0 py-2 rounded-xl border text-lg font-semibold transition-all ${form.type === 'income' ? 'bg-green-50 border-green-200 text-green-700 ring-2 ring-green-200' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Receita</button>
-        <button type="button" onClick={() => handleChange('type', 'expense')} className={`flex-1 px-0 py-2 rounded-xl border text-lg font-semibold transition-all ${form.type === 'expense' ? 'bg-red-50 border-red-400 text-red-600 ring-2 ring-red-200' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Despesa</button>
-      </div>
-      {/* Primeira linha: Valor, Data, Competência */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-        {/* Valor */}
-        <div>
-          <label className="block text-base font-medium text-gray-700 mb-1">Valor</label>
-          <CurrencyInput
-            value={form.amount}
-            onChange={(value) => handleChange('amount', value)}
-            currency={currency}
-            error={!!errors.amount}
-            autoFocus
-          />
-          {errors.amount && <span className="text-xs text-red-500">{errors.amount}</span>}
+    <form onSubmit={handleSubmit} className="w-full space-y-3">
+      {/* Header */}
+      <div className="text-center mb-6">
+        <h2 className="text-3xl font-bold text-gray-900 mb-3">
+          {id ? 'Editar transação' : `Nova ${form.type === 'income' ? 'receita' : 'despesa'}`}
+        </h2>
+          {/* Tipo */}
+          <div className="flex gap-2 justify-center max-w-md mx-auto">
+            <button type="button" onClick={() => handleChange('type', 'income')} className={`flex-1 px-0 py-2 rounded-lg border text-sm font-semibold transition-all ${form.type === 'income' ? 'bg-green-50 border-green-200 text-green-700 ring-2 ring-green-200' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Receita</button>
+            <button type="button" onClick={() => handleChange('type', 'expense')} className={`flex-1 px-0 py-2 rounded-lg border text-sm font-semibold transition-all ${form.type === 'expense' ? 'bg-red-50 border-red-400 text-red-600 ring-2 ring-red-200' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Despesa</button>
+          </div>
         </div>
-        {/* Data + Joinha */}
-        <div className="relative flex flex-col">
-          <label className="block text-base font-medium text-gray-700 mb-1">Data</label>
-          <div className="flex items-center gap-2">
+        {/* Primeira linha: Valor, Data, Competência e Status */}
+        <div className="grid grid-cols-7 gap-3">
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Valor</label>
+            <CurrencyInput
+              value={form.amount}
+              onChange={(value) => handleChange('amount', value)}
+              currency={currency}
+              error={!!errors.amount}
+              autoFocus
+            />
+            {errors.amount && <span className="text-xs text-red-500">{errors.amount}</span>}
+          </div>
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
             <DateInput
               value={form.due_date}
               onChange={(value) => handleChange('due_date', value)}
@@ -305,155 +300,160 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
               id="transaction-date"
               submitButtonRef={submitButtonRef}
             />
+            {errors.due_date && <span className="text-xs text-red-500">{errors.due_date}</span>}
+          </div>
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Competência</label>
+            <DateInput
+              value={form.competence_date}
+              onChange={(value) => handleChange('competence_date', value)}
+              error={!!errors.competence_date}
+              id="transaction-competence"
+              submitButtonRef={submitButtonRef}
+            />
+            {errors.competence_date && <span className="text-xs text-red-500">{errors.competence_date}</span>}
+          </div>
+          <div className="col-span-1 flex flex-col items-center justify-center">
+            <label className="block text-sm font-medium text-gray-700 mb-1 text-center">
+              {isPaid ? 'Pago' : 'Não pago'}
+            </label>
             <button
               type="button"
-              className="ml-1 focus:outline-none hover:scale-110 transition-transform"
-              title={isPaid ? 'Pago' : 'Pendente'}
+              className={`w-8 h-5 flex items-center rounded-full transition-colors duration-200 focus:outline-none ${isPaid ? 'bg-green-100' : 'bg-gray-200'} ${isPaid ? 'ring-2 ring-green-200' : ''}`}
               onClick={() => setIsPaid(!isPaid)}
-              tabIndex={0}
+              aria-pressed={isPaid}
             >
-              <ThumbsUp 
-                size={28}
-                className={`${isPaid ? 'text-green-500 fill-green-500' : 'text-gray-300'}`}
-                strokeWidth={2.2}
-              />
+              <span className={`inline-block w-4 h-4 transform rounded-full shadow transition-transform duration-200 ${isPaid ? 'translate-x-3 bg-green-500' : 'bg-white'}`}></span>
             </button>
           </div>
-          {errors.due_date && <span className="text-xs text-red-500">{errors.due_date}</span>}
         </div>
-        {/* Competência */}
+        {/* Segunda linha: Descrição */}
         <div>
-          <label className="block text-base font-medium text-gray-700 mb-1">Competência</label>
-          <DateInput
-            value={form.competence_date}
-            onChange={(value) => handleChange('competence_date', value)}
-            error={!!errors.competence_date}
-            id="transaction-competence"
-            submitButtonRef={submitButtonRef}
-          />
-          {errors.competence_date && <span className="text-xs text-red-500">{errors.competence_date}</span>}
-        </div>
-      </div>
-      {/* Segunda linha: Descrição, Conta/Cartão */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-        {/* Descrição */}
-        <div>
-          <label className="block text-base font-medium text-gray-700 mb-1">Descrição</label>
-          <input type="text" className={`w-full px-4 py-3 rounded-xl border ${errors.description ? 'border-red-400' : 'border-gray-200'} focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50`} placeholder="Descrição da transação" value={form.description} onChange={e => handleChange('description', e.target.value)} ref={descriptionInputRef} />
+          <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+          <input type="text" className={`w-full px-3 py-2 rounded-lg border ${errors.description ? 'border-red-400' : 'border-gray-200'} focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50 text-sm`} placeholder="Descrição da transação" value={form.description} onChange={e => handleChange('description', e.target.value)} />
           {errors.description && <span className="text-xs text-red-500">{errors.description}</span>}
         </div>
-        {/* Conta/Cartão */}
-        <div>
-          <label className="block text-base font-medium text-gray-700 mb-1">Conta/Cartão</label>
-          <AccountSelect
-            value={form.account_id}
-            onChange={(value) => handleChange('account_id', value)}
-            options={[
-              { value: '', label: 'Selecione um banco' },
-              ...accounts
-                .filter(acc => acc.currency === currency)
-                .map(acc => ({ value: acc.id, label: acc.name }))
-            ]}
-            error={!!errors.account_id}
-          />
-          {errors.account_id && <span className="text-xs text-red-500">{errors.account_id}</span>}
+
+        {/* Terceira linha: Conta e Categoria */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Conta/Cartão</label>
+            <AccountSelect
+              value={form.account_id}
+              onChange={(value) => handleChange('account_id', value)}
+              options={[
+                { value: '', label: 'Selecione um banco' },
+                ...accounts
+                  .filter(acc => acc.currency === currency)
+                  .map(acc => ({ value: acc.id, label: acc.name }))
+              ]}
+              error={!!errors.account_id}
+            />
+            {errors.account_id && <span className="text-xs text-red-500">{errors.account_id}</span>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+            <CategorySelect
+              value={form.category_id}
+              onChange={(value) => handleChange('category_id', value)}
+              options={[
+                { value: '', label: 'Buscar a categoria..' },
+                ...getCategoryOptions()
+              ]}
+              error={!!errors.category_id}
+            />
+            {errors.category_id && <span className="text-xs text-red-500">{errors.category_id}</span>}
+          </div>
         </div>
-      </div>
-      {/* Terceira linha: Categoria, bloco com Despesa fixa e Repetir */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 items-end">
-        {/* Categoria */}
-        <div>
-          <label className="block text-base font-medium text-gray-700 mb-1">Categoria</label>
-          <CategorySelect
-            value={form.category_id}
-            onChange={(value) => handleChange('category_id', value)}
-            options={[
-              { value: '', label: 'Buscar a categoria..' },
-              ...getCategoryOptions()
-            ]}
-            error={!!errors.category_id}
-          />
-          {errors.category_id && <span className="text-xs text-red-500">{errors.category_id}</span>}
-        </div>
-        {/* Bloco: Despesa fixa e Repetir */}
-        <div className="flex flex-wrap items-center gap-6">
-          <div className="flex items-center gap-2">
-            <Infinity size={28} strokeWidth={2.2} className={repeatType === 'fixed' ? 'text-indigo-500' : 'text-gray-300'} />
-            <span className="text-gray-700 text-base font-medium">Despesa fixa</span>
+
+        {/* Quarta linha: Toggles */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Infinity size={20} strokeWidth={2.2} className={repeatType === 'fixed' ? 'text-indigo-500' : 'text-gray-300'} />
+              <span className="text-gray-700 text-sm font-medium">Despesa fixa</span>
+            </div>
             <button
               type="button"
-              className={`ml-2 w-10 h-6 flex items-center rounded-full transition-colors duration-200 focus:outline-none ${repeatType === 'fixed' ? 'bg-[#f1f3fe]' : 'bg-gray-200'} ${repeatType === 'fixed' ? 'ring-2 ring-indigo-200' : ''} ${id ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`w-8 h-5 flex items-center rounded-full transition-colors duration-200 focus:outline-none ${repeatType === 'fixed' ? 'bg-[#f1f3fe]' : 'bg-gray-200'} ${repeatType === 'fixed' ? 'ring-2 ring-indigo-200' : ''} ${id ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={() => !id && setRepeatType(repeatType === 'fixed' ? 'none' : 'fixed')}
               aria-pressed={repeatType === 'fixed'}
               disabled={!!id}
             >
-              <span className={`inline-block w-5 h-5 transform rounded-full shadow transition-transform duration-200 ${repeatType === 'fixed' ? 'translate-x-4 bg-[#6366f1]' : 'bg-white'}`}></span>
+              <span className={`inline-block w-4 h-4 transform rounded-full shadow transition-transform duration-200 ${repeatType === 'fixed' ? 'translate-x-3 bg-[#6366f1]' : 'bg-white'}`}></span>
             </button>
           </div>
-          <div className="flex items-center gap-2">
-            <Repeat2 size={28} strokeWidth={2.2} className={repeatType === 'parcel' ? 'text-indigo-500' : 'text-gray-300'} />
-            <span className="text-gray-700 text-base font-medium">Repetir</span>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Repeat2 size={20} strokeWidth={2.2} className={repeatType === 'parcel' ? 'text-indigo-500' : 'text-gray-300'} />
+              <span className="text-gray-700 text-sm font-medium">Repetir</span>
+            </div>
             <button
               type="button"
-              className={`ml-2 w-10 h-6 flex items-center rounded-full transition-colors duration-200 focus:outline-none ${repeatType === 'parcel' ? 'bg-[#f1f3fe]' : 'bg-gray-200'} ${repeatType === 'parcel' ? 'ring-2 ring-indigo-200' : ''} ${id ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`w-8 h-5 flex items-center rounded-full transition-colors duration-200 focus:outline-none ${repeatType === 'parcel' ? 'bg-[#f1f3fe]' : 'bg-gray-200'} ${repeatType === 'parcel' ? 'ring-2 ring-indigo-200' : ''} ${id ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={() => !id && setRepeatType(repeatType === 'parcel' ? 'none' : 'parcel')}
               aria-pressed={repeatType === 'parcel'}
               disabled={!!id}
             >
-              <span className={`inline-block w-5 h-5 transform rounded-full shadow transition-transform duration-200 ${repeatType === 'parcel' ? 'translate-x-4 bg-[#6366f1]' : 'bg-white'}`}></span>
+              <span className={`inline-block w-4 h-4 transform rounded-full shadow transition-transform duration-200 ${repeatType === 'parcel' ? 'translate-x-3 bg-[#6366f1]' : 'bg-white'}`}></span>
             </button>
-            {repeatType === 'parcel' && (
-              <div className="flex items-center gap-2 ml-6">
-                <input
-                  type="number"
-                  min={2}
-                  className="w-14 text-lg text-gray-900 font-medium border-b-2 border-gray-300 focus:border-indigo-400 outline-none bg-transparent text-center"
-                  value={repeatCount}
-                  onChange={e => !id && setRepeatCount(Number(e.target.value))}
-                  disabled={!!id}
-                />
-                <span className="text-gray-700 text-base font-medium">vezes</span>
-                <div className="relative">
-                  <select
-                    className="appearance-none text-gray-700 text-base font-medium bg-transparent border-b-2 border-gray-300 focus:border-indigo-400 outline-none pr-8"
-                    value={repeatPeriod}
-                    onChange={e => !id && setRepeatPeriod(e.target.value as any)}
-                    disabled={!!id}
-                  >
-                    {periodOptions.map(opt => (
-                      <option key={opt.value} value={opt.value} className="text-gray-700 text-base font-medium">{opt.label}</option>
-                    ))}
-                  </select>
-                  <span className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
+          
+          {repeatType === 'parcel' && (
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <input
+                type="number"
+                min={2}
+                className="w-12 text-sm text-gray-900 font-medium border-b-2 border-gray-300 focus:border-indigo-400 outline-none bg-transparent text-center"
+                value={repeatCount}
+                onChange={e => !id && setRepeatCount(Number(e.target.value))}
+                disabled={!!id}
+              />
+              <span className="text-gray-700 text-sm font-medium">vezes a cada</span>
+              <div className="relative">
+                <select
+                  className="appearance-none text-gray-700 text-sm font-medium bg-transparent border-b-2 border-gray-300 focus:border-indigo-400 outline-none pr-6"
+                  value={repeatPeriod}
+                  onChange={e => !id && setRepeatPeriod(e.target.value as any)}
+                  disabled={!!id}
+                >
+                  {periodOptions.map(opt => (
+                    <option key={opt.value} value={opt.value} className="text-gray-700 text-sm font-medium">{opt.label}</option>
+                  ))}
+                </select>
+                <span className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </span>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Quinta linha: Observação */}
+        <div>
+          <textarea className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50 text-sm" rows={2} placeholder="Observação (opcional)" value={form.observation} onChange={e => handleChange('observation', e.target.value)} />
+        </div>
+      
+      {/* Botões */}
+      <div className="mt-6 space-y-3">
+        <button
+          ref={submitButtonRef}
+          type="submit"
+          className="w-full py-4 rounded-xl text-lg font-bold bg-[#f1f3fe] text-[#6366f1] shadow hover:bg-indigo-100 transition disabled:opacity-50"
+          disabled={isLoading || submitting}
+        >
+          {id ? 'Salvar' : (form.type === 'income' ? 'Adicionar Receita' : 'Adicionar Despesa')}
+        </button>
+        <button
+          type="button"
+          className="w-full py-4 rounded-xl text-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
+          onClick={onCancel}
+          disabled={isLoading || submitting}
+        >
+          Cancelar
+        </button>
       </div>
-      {/* Observação */}
-      <div className="flex flex-col items-center mb-4 md:mb-6">
-        <textarea className="w-full mt-2 px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50 text-center" rows={2} placeholder="Observação (opcional)" value={form.observation} onChange={e => handleChange('observation', e.target.value)} />
-      </div>
-      {/* Botões de ação */}
-      <button
-        ref={submitButtonRef}
-        type="submit"
-        className="w-full py-4 rounded-xl text-lg font-bold bg-[#f1f3fe] text-[#6366f1] shadow hover:bg-indigo-100 transition disabled:opacity-50 mt-2"
-        disabled={isLoading || submitting}
-      >
-        {id ? 'Salvar' : (form.type === 'income' ? 'Adicionar Receita' : 'Adicionar Despesa')}
-      </button>
-      <button
-        type="button"
-        className="w-full py-4 rounded-xl text-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition mt-3"
-        onClick={onCancel}
-        disabled={isLoading || submitting}
-      >
-        Cancelar
-      </button>
     </form>
   );
 };
