@@ -647,9 +647,9 @@ const TransactionsPage: React.FC = () => {
                     </div>
                     <div className="flex gap-2">
                       <button
-                        className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                        className={`flex-1 px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-700 ${
                           isCustomRangeValid()
-                            ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                            ? 'bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800'
                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                         }`}
                         onClick={handleApplyCustomRange}
@@ -659,7 +659,7 @@ const TransactionsPage: React.FC = () => {
                       </button>
                       {isCustomDateRange && (
                         <button
-                          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                          className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors duration-150 font-medium text-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
                           onClick={handleGoToCurrentMonth}
                         >
                           Limpar
