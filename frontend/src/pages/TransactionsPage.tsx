@@ -349,19 +349,22 @@ const TransactionsPage: React.FC = () => {
     }, 0);
   }
 
-  // Saldo anterior: acumulado até o dia anterior ao primeiro lançamento do período selecionado
+  // Saldo anterior: acumulado até o período anterior ao selecionado
   // Usar apenas as transações que passaram pelos filtros (moeda, banco, categoria)
-  // MAS considerar todas as transações até a data, não apenas do período selecionado
+  // Para visualização por competência, considerar transações com competence_date anterior ao período
   const transacoesParaSaldoAnterior = transactions.filter(t => {
     const acc = accounts.find(a => a.id === t.account_id);
     const bankMatch = selectedBank === '' || t.account_id === selectedBank;
     const categoryMatch = selectedCategory === '' || t.category_id === selectedCategory;
-    const due = parseDateString(t.due_date);
+    const competence = parseDateString(t.competence_date);
     
-    // Para range personalizado, usar a data inicial do range
-    let referenciaData = primeiraDataDoMes;
+    // Para range personalizado, usar a data inicial do range como referência
+    let periodoInicio: Date | null = null;
     if (isCustomDateRange && customStartDate) {
-      referenciaData = parseDateString(customStartDate);
+      periodoInicio = parseDateString(customStartDate);
+    } else {
+      // Para visualização mensal, usar o primeiro dia do mês selecionado
+      periodoInicio = new Date(selectedMonthYear.year, selectedMonthYear.month - 1, 1);
     }
     
     const shouldInclude = (
@@ -370,9 +373,9 @@ const TransactionsPage: React.FC = () => {
       bankMatch &&
       categoryMatch &&
       t.is_paid &&
-      due &&
-      referenciaData &&
-      due < referenciaData
+      competence &&
+      periodoInicio &&
+      competence < periodoInicio
     );
 
     // Debug logs
@@ -384,8 +387,9 @@ const TransactionsPage: React.FC = () => {
         type: t.type,
         account: acc.name,
         due_date: t.due_date,
-        referenciaData: referenciaData,
-        due: due,
+        competence_date: t.competence_date,
+        periodoInicio: periodoInicio,
+        competence: competence,
         shouldInclude,
         bankMatch,
         categoryMatch
@@ -405,7 +409,7 @@ const TransactionsPage: React.FC = () => {
     selectedCurrency,
     selectedBank,
     selectedCategory,
-    primeiraDataDoMes: primeiraDataDoMes,
+    selectedMonthYear: selectedMonthYear,
     isCustomDateRange,
     customStartDate
   });
