@@ -3,6 +3,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import './DateInput.css';
 import { Calendar } from 'lucide-react';
+import { useDateInputContext } from '../contexts/DateInputContext';
 
 interface DateInputProps {
   value: string;
@@ -26,10 +27,28 @@ const DateInput: React.FC<DateInputProps> = ({
   submitButtonRef
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState<string>("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const uniqueId = useRef(`date-input-${Math.random().toString(36).substr(2, 9)}`);
+  const { activeCalendar, setActiveCalendar } = useDateInputContext();
+  
+  // Verifica se este calendário está aberto
+  const isOpen = activeCalendar === uniqueId.current;
+
+  // Fechar calendário ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isOpen && containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setActiveCalendar(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, setActiveCalendar]);
 
   // Converter string para Date
   const stringToDate = (dateStr: string): Date | null => {
@@ -124,7 +143,7 @@ const DateInput: React.FC<DateInputProps> = ({
       onChange("");
     }
     // Fecha o calendário após seleção
-    setIsOpen(false);
+    setActiveCalendar(null);
     // Remove o foco do input e foca no botão de confirmar
     setTimeout(() => {
       if (inputRef.current) {
@@ -165,23 +184,26 @@ const DateInput: React.FC<DateInputProps> = ({
     }
     
     // Fecha o calendário se estiver aberto
-    setIsOpen(false);
+    setActiveCalendar(null);
   };
 
   const handleFocus = () => {
     if (!disabled) {
-      // Seleciona todo o texto quando o campo recebe foco
-      if (inputRef.current) {
-        inputRef.current.select();
+      // Se o calendário estiver aberto, fecha ele
+      if (isOpen) {
+        setActiveCalendar(null);
+      } else {
+        // Seleciona todo o texto quando o campo recebe foco
+        if (inputRef.current) {
+          inputRef.current.select();
+        }
       }
-      // Não abre automaticamente o calendário no foco para permitir digitação
-      // setIsOpen(true);
     }
   };
 
   const handleCalendarClick = () => {
     if (!disabled) {
-      setIsOpen(!isOpen);
+      setActiveCalendar(isOpen ? null : uniqueId.current);
     }
   };
 
@@ -193,20 +215,20 @@ const DateInput: React.FC<DateInputProps> = ({
         submitButtonRef.current.focus();
       }
     } else if (e.key === 'Escape') {
-      setIsOpen(false);
+      setActiveCalendar(null);
       if (inputRef.current) {
         inputRef.current.blur();
       }
     } else if (e.key === 'Tab') {
       // Fechar calendário e permitir TAB funcionar normalmente
-      setIsOpen(false);
+      setActiveCalendar(null);
       handleInputBlur();
       // Não prevenir o comportamento padrão do TAB para permitir navegação
     }
   };
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <div className="relative w-full">
         <input
           ref={inputRef}
@@ -237,14 +259,16 @@ const DateInput: React.FC<DateInputProps> = ({
       </div>
       
       {isOpen && (
-        <DatePicker
-          selected={selectedDate}
-          onChange={handleDateChange}
-          open={isOpen}
-          inline
-          dateFormat="dd/MM/yyyy"
-          calendarClassName="shadow-lg border border-gray-200 rounded-xl overflow-hidden absolute top-full left-0 z-10 bg-white"
-        />
+        <div className="absolute top-full left-0 z-50 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
+          <DatePicker
+            selected={selectedDate}
+            onChange={handleDateChange}
+            open={isOpen}
+            inline
+            dateFormat="dd/MM/yyyy"
+            calendarClassName="!border-none !shadow-none !rounded-none"
+          />
+        </div>
       )}
     </div>
   );
