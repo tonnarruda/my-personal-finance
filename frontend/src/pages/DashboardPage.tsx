@@ -200,9 +200,11 @@ const DashboardPage: React.FC = () => {
       if (!map[cat.id]) map[cat.id] = { label: cat.name, value: 0, color: cat.color };
       map[cat.id].value += tx.amount / 100;
     });
-    // Calcula percentuais
+    // Calcula percentuais e ordena por valor (do maior para o menor)
     const total = Object.values(map).reduce((sum, c) => sum + c.value, 0) || 1;
-    return Object.values(map).map(c => ({ ...c, percent: (c.value / total) * 100 }));
+    return Object.values(map)
+      .map(c => ({ ...c, percent: (c.value / total) * 100 }))
+      .sort((a, b) => b.value - a.value); // Ordenação do maior para o menor valor
   }
   const receitasPorCategoria = groupByCategory('income');
   const despesasPorCategoria = groupByCategory('expense');
