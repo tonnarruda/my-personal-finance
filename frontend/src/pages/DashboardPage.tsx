@@ -10,6 +10,7 @@ import ModernChart from '../components/ModernChart';
 import ModernResultCard from '../components/ModernResultCard';
 import ModernMetrics from '../components/ModernMetrics';
 import TransactionForm from '../components/TransactionForm';
+import AccountForm from '../components/AccountForm';
 import { useToast } from '../contexts/ToastContext';
 
 const DashboardPage: React.FC = () => {
@@ -27,6 +28,11 @@ const DashboardPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalType, setModalType] = useState<'income' | 'expense'>('expense');
+  
+  // Account modal state
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [accountModalLoading, setAccountModalLoading] = useState(false);
+  
   const { showSuccess, showError } = useToast();
 
   // Atualizar dados mockados para serem por currency
@@ -38,39 +44,6 @@ const DashboardPage: React.FC = () => {
     despesasPorCategoria: CategoriaData[];
     receitasPorCategoria: CategoriaData[];
   }
-  const mockCurrencyData: Record<string, CurrencyData> = {
-    BRL: {
-      receitaMes: 23000,
-      despesaMes: 19500,
-      resultadoMes: 23000 - 19500,
-      despesasPorCategoria: [
-        { label: 'Casa/Energia', value: 10000, percent: 49.37, color: '#facc15' },
-        { label: 'Transporte/Gasolina', value: 7076.28, percent: 34.94, color: '#f87171' },
-        { label: 'Cartão de Crédito', value: 3040.41, percent: 15.01, color: '#64748b' },
-        { label: 'Alimentação', value: 138, percent: 0.68, color: '#a78bfa' },
-      ],
-      receitasPorCategoria: [
-        { label: 'Salário', value: 18000, percent: 78.26, color: '#4ade80' },
-        { label: 'Freelance', value: 3000, percent: 13.04, color: '#60a5fa' },
-        { label: 'Investimentos', value: 2000, percent: 8.70, color: '#facc15' },
-      ],
-    },
-    USD: {
-      receitaMes: 5000,
-      despesaMes: 3200,
-      resultadoMes: 5000 - 3200,
-      despesasPorCategoria: [
-        { label: 'Rent', value: 2000, percent: 62.5, color: '#facc15' },
-        { label: 'Transport', value: 800, percent: 25, color: '#f87171' },
-        { label: 'Food', value: 400, percent: 12.5, color: '#a78bfa' },
-      ],
-      receitasPorCategoria: [
-        { label: 'Salary', value: 4000, percent: 80, color: '#4ade80' },
-        { label: 'Freelance', value: 1000, percent: 20, color: '#60a5fa' },
-      ],
-    },
-  };
-  const data = mockCurrencyData[selectedCurrency] || mockCurrencyData.BRL;
 
   useEffect(() => {
     async function fetchNome() {
@@ -268,6 +241,31 @@ const DashboardPage: React.FC = () => {
     setIsModalOpen(false);
   };
 
+  // Account modal handlers
+  const handleOpenAccountModal = () => {
+    setIsAccountModalOpen(true);
+  };
+
+  const handleCloseAccountModal = () => {
+    setIsAccountModalOpen(false);
+  };
+
+  const handleAccountSubmit = async (data: any) => {
+    setAccountModalLoading(true);
+    try {
+      const payload = toAccountBackendPayload(data);
+      await accountService.createAccount(payload);
+      showSuccess('Conta criada com sucesso!');
+      setIsAccountModalOpen(false);
+      // Reload data to reflect changes
+      setReloadFlag(prev => prev + 1);
+    } catch (error) {
+      showError('Erro ao criar conta');
+    } finally {
+      setAccountModalLoading(false);
+    }
+  };
+
   // Função para formatar data para ISO com timezone
   function formatDateToISO(dateStr: string): string {
     if (!dateStr) return '';
@@ -292,7 +290,7 @@ const DashboardPage: React.FC = () => {
     return date.toISOString();
   }
 
-  // Função utilitária para converter objeto para snake_case e mapear campos para o backend
+  // Função utilitária para converter objeto para snake_case e mapear campos para o backend (transações)
   function toBackendPayload(obj: any) {
     return {
       user_id: user?.id,
@@ -310,6 +308,20 @@ const DashboardPage: React.FC = () => {
       installments: obj.installments,
       current_installment: obj.current_installment,
       parent_transaction_id: obj.parent_transaction_id,
+    };
+  }
+
+  // Função utilitária para converter dados de conta para o backend
+  function toAccountBackendPayload(obj: any) {
+    return {
+      name: obj.name,
+      currency: obj.currency,
+      color: obj.color,
+      type: obj.accountType,
+      is_active: true,
+      due_date: obj.initialDate ? formatDateToISO(obj.initialDate) : undefined,
+      competence_date: obj.initialDate ? formatDateToISO(obj.initialDate) : undefined,
+      initial_value: obj.initialValue || 0,
     };
   }
 
@@ -371,7 +383,7 @@ const DashboardPage: React.FC = () => {
         {/* Bloco de acesso rápido */}
         <div>
           <h2 className="text-lg font-bold text-gray-900 mb-4">Acesso Rápido</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
             <button onClick={handleOpenExpenseModal} className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl px-6 py-0 shadow-sm hover:bg-red-50 transition">
               <span className="text-3xl text-red-500 mb-2">&#8722;</span>
               <span className="text-gray-700 text-base font-medium">DESPESA</span>
@@ -391,6 +403,12 @@ const DashboardPage: React.FC = () => {
                 <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2"/><path d="M8 12h8M12 8v8" stroke="#2563eb" strokeWidth="2" strokeLinecap="round"/></svg>
               </span>
               <span className="text-gray-700 text-base font-medium">IMPORTAR</span>
+            </button>
+            <button onClick={handleOpenAccountModal} className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl px-6 py-0 shadow-sm hover:bg-orange-50 transition">
+              <span className="text-2xl text-orange-600 mb-2">
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M21 8V7a3 3 0 00-3-3H6a3 3 0 00-3 3v1" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 8v6a3 3 0 003 3h12a3 3 0 003-3V8" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M6 12h12" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </span>
+              <span className="text-gray-700 text-base font-medium">CONTA</span>
             </button>
           </div>
         </div>
@@ -661,6 +679,26 @@ const DashboardPage: React.FC = () => {
               onCancel={handleCloseModal}
               isLoading={modalLoading}
               currency={selectedCurrency}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Account Modal Overlay */}
+      {isAccountModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto relative">
+            <button
+              onClick={handleCloseAccountModal}
+              className="absolute top-6 right-8 text-gray-400 hover:text-gray-600 text-3xl"
+              title="Fechar"
+            >
+              &times;
+            </button>
+            <AccountForm
+              onSubmit={handleAccountSubmit}
+              onCancel={handleCloseAccountModal}
+              isLoading={accountModalLoading}
             />
           </div>
         </div>
