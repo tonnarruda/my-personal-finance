@@ -42,11 +42,31 @@ const TransactionsPage: React.FC = () => {
   });
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
   const { showSuccess, showError } = useToast();
+  
+  // Estados para o menu flutuante
+  const [showMonthDropdown, setShowMonthDropdown] = useState(false);
+  const [isCustomDateRange, setIsCustomDateRange] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     fetchData();
   }, []);
+
+  // Fechar dropdown quando clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showMonthDropdown && !(event.target as Element).closest('.relative')) {
+        setShowMonthDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMonthDropdown]);
 
   const normalizeTransaction = (t: any) => ({
     ...t,
@@ -104,6 +124,19 @@ const TransactionsPage: React.FC = () => {
     const { month, year } = extractMonthYear(t.competence_date);
     const bankMatch = selectedBank === '' || t.account_id === selectedBank;
     const categoryMatch = selectedCategory === '' || t.category_id === selectedCategory;
+    
+    // Filtro por range de data personalizado
+    if (isCustomDateRange && customStartDate && customEndDate) {
+      const competenceDate = parseDateString(t.competence_date);
+      const startDate = parseDateString(customStartDate);
+      const endDate = parseDateString(customEndDate);
+      
+      if (competenceDate && startDate && endDate) {
+        const dateMatch = competenceDate >= startDate && competenceDate <= endDate;
+        return acc && acc.currency === selectedCurrency && bankMatch && categoryMatch && dateMatch;
+      }
+    }
+    
     return (
       acc &&
       acc.currency === selectedCurrency &&
@@ -122,7 +155,7 @@ const TransactionsPage: React.FC = () => {
     return da.getTime() - db.getTime();
   });
 
-  // Encontre a menor data de lançamento do mês selecionado
+  // Encontre a menor data de lançamento do período selecionado
   const datasDoMes = transactionsForCurrencySorted.map(t => parseDateString(t.due_date)).filter(Boolean);
   const primeiraDataDoMes = datasDoMes.length > 0 ? new Date(Math.min(...datasDoMes.map(d => d!.getTime()))) : null;
 
@@ -270,6 +303,7 @@ const TransactionsPage: React.FC = () => {
 
   // Função para avançar mês
   const handleNextMonth = () => {
+    setIsCustomDateRange(false);
     setSelectedMonthYear(prev => {
       let month = prev.month + 1;
       let year = prev.year;
@@ -282,6 +316,7 @@ const TransactionsPage: React.FC = () => {
   };
   // Função para retroceder mês
   const handlePrevMonth = () => {
+    setIsCustomDateRange(false);
     setSelectedMonthYear(prev => {
       let month = prev.month - 1;
       let year = prev.year;
@@ -319,14 +354,20 @@ const TransactionsPage: React.FC = () => {
     }, 0);
   }
 
-  // Saldo anterior: acumulado até o dia anterior ao primeiro lançamento do mês selecionado
+  // Saldo anterior: acumulado até o dia anterior ao primeiro lançamento do período selecionado
   // Usar apenas as transações que passaram pelos filtros (moeda, banco, categoria)
-  // MAS considerar todas as transações até a data, não apenas do mês selecionado
+  // MAS considerar todas as transações até a data, não apenas do período selecionado
   const transacoesParaSaldoAnterior = transactions.filter(t => {
     const acc = accounts.find(a => a.id === t.account_id);
     const bankMatch = selectedBank === '' || t.account_id === selectedBank;
     const categoryMatch = selectedCategory === '' || t.category_id === selectedCategory;
     const due = parseDateString(t.due_date);
+    
+    // Para range personalizado, usar a data inicial do range
+    let referenciaData = primeiraDataDoMes;
+    if (isCustomDateRange && customStartDate) {
+      referenciaData = parseDateString(customStartDate);
+    }
     
     const shouldInclude = (
       acc &&
@@ -335,8 +376,8 @@ const TransactionsPage: React.FC = () => {
       categoryMatch &&
       t.is_paid &&
       due &&
-      primeiraDataDoMes &&
-      due < primeiraDataDoMes
+      referenciaData &&
+      due < referenciaData
     );
 
     // Debug logs
@@ -348,7 +389,7 @@ const TransactionsPage: React.FC = () => {
         type: t.type,
         account: acc.name,
         due_date: t.due_date,
-        primeiraDataDoMes: primeiraDataDoMes,
+        referenciaData: referenciaData,
         due: due,
         shouldInclude,
         bankMatch,
@@ -369,7 +410,9 @@ const TransactionsPage: React.FC = () => {
     selectedCurrency,
     selectedBank,
     selectedCategory,
-    primeiraDataDoMes
+    primeiraDataDoMes: primeiraDataDoMes,
+    isCustomDateRange,
+    customStartDate
   });
 
   // Calcular saldo acumulado para cada dia (saldo do dia = saldo anterior + transações pagas do dia)
@@ -404,6 +447,72 @@ const TransactionsPage: React.FC = () => {
     return luminance < 0.5 ? 'text-white' : 'text-gray-800';
   }
 
+  // Funções para o menu dropdown
+  const handleGoToPreviousMonth = () => {
+    setIsCustomDateRange(false);
+    setSelectedMonthYear(prev => {
+      let month = prev.month - 1;
+      let year = prev.year;
+      if (month < 1) {
+        month = 12;
+        year -= 1;
+      }
+      return { month, year };
+    });
+    setShowMonthDropdown(false);
+  };
+
+  const handleGoToCurrentMonth = () => {
+    setIsCustomDateRange(false);
+    setCustomStartDate('');
+    setCustomEndDate('');
+    const now = new Date();
+    setSelectedMonthYear({
+      month: now.getMonth() + 1,
+      year: now.getFullYear(),
+    });
+    setShowMonthDropdown(false);
+  };
+
+  const handleSetCustomRange = () => {
+    setIsCustomDateRange(true);
+    setShowMonthDropdown(false);
+  };
+
+  const handleApplyCustomRange = () => {
+    if (customStartDate && customEndDate) {
+      const startDate = new Date(customStartDate);
+      const endDate = new Date(customEndDate);
+      
+      if (startDate <= endDate) {
+        setIsCustomDateRange(true);
+        setShowMonthDropdown(false);
+      } else {
+        alert('A data final deve ser maior que a data inicial');
+      }
+    }
+  };
+
+  // Verificar se as datas estão válidas
+  const isCustomRangeValid = () => {
+    if (!customStartDate || !customEndDate) return false;
+    const startDate = new Date(customStartDate);
+    const endDate = new Date(customEndDate);
+    return startDate <= endDate;
+  };
+
+  // Formatação do período exibido
+  const getDisplayPeriod = () => {
+    if (isCustomDateRange && customStartDate && customEndDate) {
+      const startDate = parseDateString(customStartDate);
+      const endDate = parseDateString(customEndDate);
+      if (startDate && endDate) {
+        return `${formatDateBR(customStartDate)} - ${formatDateBR(customEndDate)}`;
+      }
+    }
+    return `${monthNames[selectedMonthYear.month - 1]} ${selectedMonthYear.year}`;
+  };
+
   return (
     <Layout>
       {/* Bloco fixo no topo, alinhado ao conteúdo principal */}
@@ -435,8 +544,8 @@ const TransactionsPage: React.FC = () => {
             </button>
           ))}
         </div>
-        {/* Seletor de mês fixo - ainda mais elegante */}
-        <div className="flex items-center justify-center gap-4 w-full mb-2 select-none">
+        {/* Seletor de mês com dropdown */}
+        <div className="flex items-center justify-center gap-4 w-full mb-2 select-none relative">
           <button
             className="p-2 rounded-full hover:bg-indigo-100 active:scale-90 transition group shadow-sm"
             onClick={handlePrevMonth}
@@ -447,17 +556,114 @@ const TransactionsPage: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <span
-            className="px-8 py-2 rounded-2xl bg-gradient-to-r from-indigo-50 via-white to-indigo-50 shadow-lg border border-indigo-100 text-2xl font-extrabold text-gray-900 tracking-wide transition-all duration-300"
-            style={{ minWidth: 180, textAlign: 'center', letterSpacing: '0.04em' }}
-          >
-            <span className="inline-flex items-center gap-2">
-              <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          
+          {/* Botão principal do mês com dropdown */}
+          <div className="relative">
+            <button
+              className="px-8 py-2 rounded-2xl bg-gradient-to-r from-indigo-50 via-white to-indigo-50 shadow-lg border border-indigo-100 text-2xl font-extrabold text-gray-900 tracking-wide transition-all duration-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 flex items-center gap-2"
+              style={{ minWidth: 280, textAlign: 'center', letterSpacing: '0.04em' }}
+              onClick={() => setShowMonthDropdown(!showMonthDropdown)}
+            >
+              <span className="inline-flex items-center gap-2">
+                <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2z" />
+                </svg>
+                {getDisplayPeriod()}
+              </span>
+              <svg className={`w-4 h-4 text-indigo-400 transition-transform ${showMonthDropdown ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
-              {monthNames[selectedMonthYear.month - 1]} {selectedMonthYear.year}
-            </span>
-          </span>
+            </button>
+            
+            {/* Menu dropdown */}
+            {showMonthDropdown && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50">
+                <button
+                  className="w-full px-4 py-3 text-left text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors flex items-center gap-2"
+                  onClick={handleGoToPreviousMonth}
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Mês anterior
+                </button>
+                <button
+                  className="w-full px-4 py-3 text-left text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors flex items-center gap-2"
+                  onClick={handleGoToCurrentMonth}
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Mês atual
+                </button>
+                <hr className="my-2 border-gray-100" />
+                <div className="px-4 py-2">
+                  <button
+                    className={`w-full px-4 py-3 text-left transition-colors flex items-center gap-2 rounded-lg ${
+                      isCustomDateRange
+                        ? 'bg-indigo-100 text-indigo-700'
+                        : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-700'
+                    }`}
+                    onClick={handleSetCustomRange}
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    Personalizado
+                    {isCustomDateRange && (
+                      <span className="ml-auto text-xs bg-indigo-600 text-white px-2 py-1 rounded-full">
+                        Ativo
+                      </span>
+                    )}
+                  </button>
+                  
+                  {/* Campos de data personalizados */}
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Data inicial</label>
+                      <input
+                        type="date"
+                        value={customStartDate}
+                        onChange={(e) => setCustomStartDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Data final</label>
+                      <input
+                        type="date"
+                        value={customEndDate}
+                        onChange={(e) => setCustomEndDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                          isCustomRangeValid()
+                            ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                        onClick={handleApplyCustomRange}
+                        disabled={!isCustomRangeValid()}
+                      >
+                        Aplicar
+                      </button>
+                      {isCustomDateRange && (
+                        <button
+                          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                          onClick={handleGoToCurrentMonth}
+                        >
+                          Limpar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          
           <button
             className="p-2 rounded-full hover:bg-indigo-100 active:scale-90 transition group shadow-sm"
             onClick={handleNextMonth}
