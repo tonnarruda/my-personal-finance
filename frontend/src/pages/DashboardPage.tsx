@@ -4,10 +4,13 @@ import api, { accountService, transactionService, categoryService } from '../ser
 import { Account } from '../types/account';
 import { Transaction } from '../types/transaction';
 import { Category } from '../types/category';
+import { CreateTransactionRequest } from '../types/transaction';
 import Layout from '../components/Layout';
 import ModernChart from '../components/ModernChart';
 import ModernResultCard from '../components/ModernResultCard';
 import ModernMetrics from '../components/ModernMetrics';
+import TransactionForm from '../components/TransactionForm';
+import { useToast } from '../contexts/ToastContext';
 
 const DashboardPage: React.FC = () => {
   const [nome, setNome] = useState('');
@@ -19,6 +22,12 @@ const DashboardPage: React.FC = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [reloadFlag, setReloadFlag] = useState(0);
   const [selectedCurrency, setSelectedCurrency] = useState('BRL');
+  
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalType, setModalType] = useState<'income' | 'expense'>('expense');
+  const { showSuccess, showError } = useToast();
 
   // Atualizar dados mockados para serem por currency
   interface CategoriaData { label: string; value: number; percent: number; color: string; }
@@ -76,6 +85,8 @@ const DashboardPage: React.FC = () => {
     fetchNome();
   }, [user?.id]);
 
+
+
   useEffect(() => {
     async function fetchAllData() {
       setLoadingAccounts(true);
@@ -100,7 +111,7 @@ const DashboardPage: React.FC = () => {
       }
     }
     fetchAllData();
-  }, []);
+  }, [reloadFlag]);
 
   // Agrupa contas por currency
   const accountsByCurrency: { [currency: string]: Account[] } = {};
@@ -215,6 +226,83 @@ const DashboardPage: React.FC = () => {
   const totalProjected = accountsForCurrency.reduce((sum, acc) => sum + getAccountProjectedBalance(acc.id), 0);
   const currencySymbols: Record<string, string> = { BRL: 'R$', EUR: '€', USD: 'US$', GBP: '£' };
 
+  // Modal handlers
+  const handleOpenExpenseModal = () => {
+    setModalType('expense');
+    setIsModalOpen(true);
+  };
+
+  const handleOpenIncomeModal = () => {
+    setModalType('income');
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
+  // Função para formatar data para ISO com timezone
+  function formatDateToISO(dateStr: string): string {
+    if (!dateStr) return '';
+    
+    // Se já está no formato ISO completo, retorna como está
+    if (dateStr.includes('T') && dateStr.includes('Z')) {
+      return dateStr;
+    }
+    
+    // Se está no formato YYYY-MM-DD, adiciona T00:00:00Z
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return `${dateStr}T00:00:00Z`;
+    }
+    
+    // Para outros formatos, converte para Date e depois para ISO
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      return '';
+    }
+    
+    // Formata para YYYY-MM-DDTHH:mm:ss.sssZ
+    return date.toISOString();
+  }
+
+  // Função utilitária para converter objeto para snake_case e mapear campos para o backend
+  function toBackendPayload(obj: any) {
+    return {
+      user_id: user?.id,
+      description: obj.description,
+      amount: Math.round(obj.amount * 100),
+      type: obj.type,
+      category_id: obj.category_id,
+      account_id: obj.account_id,
+      due_date: obj.due_date ? formatDateToISO(obj.due_date) : undefined,
+      competence_date: obj.competence_date ? formatDateToISO(obj.competence_date) : undefined,
+      is_paid: typeof obj.is_paid === 'boolean' ? obj.is_paid : false,
+      observation: obj.observation,
+      is_recurring: !!obj.is_recurring,
+      recurring_type: obj.recurring_type,
+      installments: obj.installments,
+      current_installment: obj.current_installment,
+      parent_transaction_id: obj.parent_transaction_id,
+    };
+  }
+
+  const handleTransactionSubmit = async (data: CreateTransactionRequest) => {
+    setModalLoading(true);
+    try {
+      const payload = toBackendPayload(data);
+      await transactionService.createTransaction(payload);
+      const transactionTypeName = data.type === 'income' ? 'Receita' : 'Despesa';
+      showSuccess(`${transactionTypeName} criada com sucesso!`);
+      setIsModalOpen(false);
+      // Reload data to reflect changes
+      setReloadFlag(prev => prev + 1);
+    } catch (error) {
+      showError('Erro ao criar transação');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="max-w-7xl mx-auto">
@@ -257,11 +345,11 @@ const DashboardPage: React.FC = () => {
         <div>
           <h2 className="text-lg font-bold text-gray-900 mb-4">Acesso Rápido</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-            <button className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl px-6 py-0 shadow-sm hover:bg-red-50 transition">
+            <button onClick={handleOpenExpenseModal} className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl px-6 py-0 shadow-sm hover:bg-red-50 transition">
               <span className="text-3xl text-red-500 mb-2">&#8722;</span>
               <span className="text-gray-700 text-base font-medium">DESPESA</span>
             </button>
-            <button className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl px-6 py-0 shadow-sm hover:bg-green-50 transition">
+            <button onClick={handleOpenIncomeModal} className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl px-6 py-0 shadow-sm hover:bg-green-50 transition">
               <span className="text-3xl text-green-600 mb-2">&#43;</span>
               <span className="text-gray-700 text-base font-medium">RECEITA</span>
             </button>
@@ -467,6 +555,23 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* Modal Overlay */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <TransactionForm
+              typeDefault={modalType}
+              onSubmit={handleTransactionSubmit}
+              onCancel={handleCloseModal}
+              isLoading={modalLoading}
+              currency={selectedCurrency}
+            />
+          </div>
+        </div>
+      )}
+      
+
     </Layout>
   );
 };
