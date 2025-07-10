@@ -15,11 +15,12 @@ func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *hand
 
 	// Middleware CORS robusto
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000", "https://thefinancer.vercel.app/", "https://vercel.app"},
+		AllowOrigins:     []string{"http://localhost:3000", "https://thefinancer.vercel.app", "https://thefinancer.vercel.app/", "https://vercel.app"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With", "Referer"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
 	}))
 
 	// Grupo de rotas para categorias
@@ -78,6 +79,9 @@ func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *hand
 	}
 
 	// Rotas de autenticação
+	router.OPTIONS("/api/signup", func(c *gin.Context) { c.Status(204) })
+	router.OPTIONS("/api/login", func(c *gin.Context) { c.Status(204) })
+	router.OPTIONS("/api/me", func(c *gin.Context) { c.Status(204) })
 	router.POST("/api/signup", authHandler.SignupHandler)
 	router.POST("/api/login", authHandler.LoginHandler)
 	router.GET("/api/me", authHandler.GetMeHandler)
