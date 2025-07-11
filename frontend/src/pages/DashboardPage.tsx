@@ -33,6 +33,9 @@ const DashboardPage: React.FC = () => {
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [accountModalLoading, setAccountModalLoading] = useState(false);
   
+  // Estado para controlar se devem mostrar contas com saldo zerado
+  const [hideZeroBalanceAccounts, setHideZeroBalanceAccounts] = useState(false);
+  
   const { showSuccess, showError } = useToast();
 
   // Função para detectar se uma transação é uma transferência
@@ -245,8 +248,19 @@ const DashboardPage: React.FC = () => {
 
   // Saldos das contas (se disponível)
   const accountsForCurrency = accounts.filter(acc => acc.currency === selectedCurrency);
-  const totalConfirmed = accountsForCurrency.reduce((sum, acc) => sum + getAccountConfirmedBalance(acc.id), 0);
-  const totalProjected = accountsForCurrency.reduce((sum, acc) => sum + getAccountProjectedBalance(acc.id), 0);
+  
+  // Filtrar contas baseado no checkbox de esconder saldos zerados
+  const filteredAccountsForCurrency = hideZeroBalanceAccounts 
+    ? accountsForCurrency.filter(acc => {
+        const confirmedBalance = getAccountConfirmedBalance(acc.id);
+        const projectedBalance = getAccountProjectedBalance(acc.id);
+        return confirmedBalance !== 0 || projectedBalance !== 0;
+      })
+    : accountsForCurrency;
+  
+  // Recalcular totais baseado nas contas filtradas
+  const totalConfirmed = filteredAccountsForCurrency.reduce((sum, acc) => sum + getAccountConfirmedBalance(acc.id), 0);
+  const totalProjected = filteredAccountsForCurrency.reduce((sum, acc) => sum + getAccountProjectedBalance(acc.id), 0);
   // Garante que zeros sejam sempre positivos
   const totalConfirmedSafe = totalConfirmed === 0 ? 0 : totalConfirmed;
   const totalProjectedSafe = totalProjected === 0 ? 0 : totalProjected;
@@ -494,7 +508,18 @@ const DashboardPage: React.FC = () => {
         {/* Card Saldos de Caixa */}
         <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 mt-6">
           <div className="bg-white rounded-2xl shadow p-8 flex flex-col min-w-0">
-            <div className="text-xl font-bold text-gray-900 mb-6">Saldos de caixa</div>
+            <div className="flex items-center justify-between mb-6">
+              <div className="text-xl font-bold text-gray-900">Saldos de caixa</div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hideZeroBalanceAccounts}
+                  onChange={(e) => setHideZeroBalanceAccounts(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-600">Esconder contas zeradas</span>
+              </label>
+            </div>
             <div className="w-full overflow-x-auto">
               <div className="mb-2 ml-1 text-lg font-semibold text-gray-700">{selectedCurrency}</div>
               <table className="w-full text-left">
@@ -506,24 +531,35 @@ const DashboardPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {accountsForCurrency.map((account, idx) => (
-                    <tr key={account.id}>
-                      <td className="py-3">
-                        <span className="inline-flex items-center gap-2">
-                          <span className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-base" style={{ background: account.color || '#22c55e' }}>
-                            {account.name.charAt(0).toUpperCase()}
-                          </span>
-                          <span className="text-gray-800 text-base">{account.name}</span>
-                        </span>
-                      </td>
-                      <td className="py-3 text-green-600 font-semibold text-base text-right min-w-[100px]">
-                        {getAccountConfirmedBalance(account.id).toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency, minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-3 text-green-600 font-semibold text-base text-right min-w-[100px]">
-                        {getAccountProjectedBalance(account.id).toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency, minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {filteredAccountsForCurrency.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="py-8 text-center text-gray-500">
+                        {hideZeroBalanceAccounts 
+                          ? 'Nenhuma conta com saldo disponível' 
+                          : 'Nenhuma conta encontrada'
+                        }
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredAccountsForCurrency.map((account, idx) => (
+                      <tr key={account.id}>
+                        <td className="py-3">
+                          <span className="inline-flex items-center gap-2">
+                            <span className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-base" style={{ background: account.color || '#22c55e' }}>
+                              {account.name.charAt(0).toUpperCase()}
+                            </span>
+                            <span className="text-gray-800 text-base">{account.name}</span>
+                          </span>
+                        </td>
+                        <td className="py-3 text-green-600 font-semibold text-base text-right min-w-[100px]">
+                          {getAccountConfirmedBalance(account.id).toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency, minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-3 text-green-600 font-semibold text-base text-right min-w-[100px]">
+                          {getAccountProjectedBalance(account.id).toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency, minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                   <tr className="font-bold">
                     <td className="py-3 text-gray-900">Total</td>
                     <td className="py-3 text-green-600 font-bold text-right min-w-[100px]">{currencySymbols[selectedCurrency] || ''} {totalConfirmedSafe.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
