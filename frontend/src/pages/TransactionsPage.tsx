@@ -102,6 +102,39 @@ const TransactionsPage: React.FC = () => {
     return cat?.color || '#a7f3d0';
   };
 
+  // Função para obter informações de transferência (conta origem → conta destino)
+  const getTransferDisplayInfo = (transaction: Transaction): string => {
+    if (!isTransferTransaction(transaction)) {
+      return '';
+    }
+
+    // Buscar todas as transações com o mesmo transfer_id
+    const relatedTransactions = transactions.filter(t => 
+      t.transfer_id === transaction.transfer_id && isTransferTransaction(t)
+    );
+
+    if (relatedTransactions.length < 2) {
+      return 'Transferência';
+    }
+
+    // Encontrar a transação de origem (expense) e destino (income)
+    const originTransaction = relatedTransactions.find(t => t.type === 'expense');
+    const destinationTransaction = relatedTransactions.find(t => t.type === 'income');
+
+    if (!originTransaction || !destinationTransaction) {
+      return 'Transferência';
+    }
+
+    // Buscar os nomes das contas
+    const originAccount = accounts.find(acc => acc.id === originTransaction.account_id);
+    const destinationAccount = accounts.find(acc => acc.id === destinationTransaction.account_id);
+
+    const originName = originAccount?.name || 'Conta';
+    const destinationName = destinationAccount?.name || 'Conta';
+
+    return `${originName} → ${destinationName}`;
+  };
+
   // Função para determinar o status da transação e retornar as informações de exibição
   const getTransactionStatus = (transaction: Transaction) => {
     if (transaction.is_paid) {
@@ -252,8 +285,22 @@ const TransactionsPage: React.FC = () => {
     );
   });
 
+  // Filtrar transferências duplicadas - manter apenas uma por transfer_id
+  const transactionsWithoutDuplicateTransfers = transactionsForCurrency.filter((transaction, index, array) => {
+    // Se não é transferência, manter
+    if (!isTransferTransaction(transaction)) {
+      return true;
+    }
+    
+    // Se é transferência, manter apenas a primeira ocorrência por transfer_id
+    const firstOccurrenceIndex = array.findIndex(t => 
+      isTransferTransaction(t) && t.transfer_id === transaction.transfer_id
+    );
+    return index === firstOccurrenceIndex;
+  });
+
   // Ordenar transações da competência selecionada pela data de lançamento (due_date)
-  const transactionsForCurrencySorted = [...transactionsForCurrency].sort((a, b) => {
+  const transactionsForCurrencySorted = [...transactionsWithoutDuplicateTransfers].sort((a, b) => {
     const da = parseDateString(a.due_date);
     const db = parseDateString(b.due_date);
     if (!da || !db) return 0;
@@ -436,6 +483,11 @@ const TransactionsPage: React.FC = () => {
   function getSaldoDoDia(transactions: typeof transactionsForCurrencySorted) {
     return transactions.reduce((acc, t) => {
       if (t.is_paid) {
+        // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
+        // Se há filtro de conta específica, incluir transferências que afetam essa conta
+        if (isTransferTransaction(t) && selectedBank === '') {
+          return acc;
+        }
         return acc + (t.type === 'income' ? t.amount : -t.amount);
       }
       return acc;
@@ -445,7 +497,21 @@ const TransactionsPage: React.FC = () => {
   // Saldo anterior: acumulado até o período anterior ao selecionado
   // Usar apenas as transações que passaram pelos filtros (moeda, banco, categoria)
   // Para visualização por competência, considerar transações com competence_date anterior ao período
-  const transacoesParaSaldoAnterior = transactions.filter(t => {
+  // Primeiro, filtrar transferências duplicadas igual ao que fazemos para as transações exibidas
+  const allTransactionsWithoutDuplicates = transactions.filter((transaction, index, array) => {
+    // Se não é transferência, manter
+    if (!isTransferTransaction(transaction)) {
+      return true;
+    }
+    
+    // Se é transferência, manter apenas a primeira ocorrência por transfer_id
+    const firstOccurrenceIndex = array.findIndex(t => 
+      isTransferTransaction(t) && t.transfer_id === transaction.transfer_id
+    );
+    return index === firstOccurrenceIndex;
+  });
+
+  const transacoesParaSaldoAnterior = allTransactionsWithoutDuplicates.filter(t => {
     const acc = accounts.find(a => a.id === t.account_id);
     const bankMatch = selectedBank === '' || t.account_id === selectedBank;
     const categoryMatch = transactionMatchesCategory(t, selectedCategory);
@@ -476,7 +542,14 @@ const TransactionsPage: React.FC = () => {
     return shouldInclude;
   });
 
-  const saldoAnteriorCalc = transacoesParaSaldoAnterior.reduce((acc, t) => acc + (t.type === 'income' ? t.amount : -t.amount), 0);
+  const saldoAnteriorCalc = transacoesParaSaldoAnterior.reduce((acc, t) => {
+    // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
+    // Se há filtro de conta específica, incluir transferências que afetam essa conta
+    if (isTransferTransaction(t) && selectedBank === '') {
+      return acc;
+    }
+    return acc + (t.type === 'income' ? t.amount : -t.amount);
+  }, 0);
   // Garante que zero seja sempre positivo (evita -0)
   const saldoAnterior = saldoAnteriorCalc === 0 ? 0 : saldoAnteriorCalc;
 
@@ -489,6 +562,11 @@ const TransactionsPage: React.FC = () => {
     const transacoesDoDia = groupedByDate[dateKey];
     const somaDoDia = transacoesDoDia.reduce((acc, t) => {
       if (t.is_paid) {
+        // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
+        // Se há filtro de conta específica, incluir transferências que afetam essa conta
+        if (isTransferTransaction(t) && selectedBank === '') {
+          return acc;
+        }
         return acc + (t.type === 'income' ? t.amount : -t.amount);
       }
       return acc;
@@ -905,27 +983,103 @@ const TransactionsPage: React.FC = () => {
                         <td className="px-4 py-3 align-middle text-left min-w-[220px] max-w-[320px] w-1/3 truncate">
                           <div className="flex flex-col gap-1">
                             <span className="font-medium truncate">{t.description}</span>
-                            <div className="flex gap-2 mt-1">
-                              <span
-                                className={`text-xs font-semibold rounded-full px-3 py-1 border`}
-                                style={{
-                                  color: acc?.color || '#facc15',
-                                  background: hexToRgba(acc?.color || '#facc15', 0.10),
-                                  borderColor: hexToRgba(acc?.color || '#facc15', 0.30),
-                                }}
-                              >
-                                {acc?.name || '-'}
-                              </span>
-                              <span
-                                className={`text-xs font-semibold rounded-full px-3 py-1 border`}
-                                style={{
-                                  color: getCategoryColor(t),
-                                  background: hexToRgba(getCategoryColor(t), 0.10),
-                                  borderColor: hexToRgba(getCategoryColor(t), 0.30),
-                                }}
-                              >
-                                {getCategoryDisplayName(t)}
-                              </span>
+                            <div className="flex gap-2 mt-1 flex-wrap">
+                              {isTransferTransaction(t) ? (
+                                <>
+                                                                     {/* Conta origem */}
+                                   {(() => {
+                                     const relatedTransactions = transactions.filter(tx => 
+                                       tx.transfer_id === t.transfer_id && isTransferTransaction(tx)
+                                     );
+                                     const originTransaction = relatedTransactions.find(tx => tx.type === 'expense');
+                                     const originAccount = originTransaction ? accounts.find(acc => acc.id === originTransaction.account_id) : null;
+                                     
+                                     if (originAccount) {
+                                       return (
+                                         <span
+                                           className={`text-xs font-semibold rounded-full px-3 py-1 border`}
+                                           style={{
+                                             color: originAccount.color || '#facc15',
+                                             background: hexToRgba(originAccount.color || '#facc15', 0.10),
+                                             borderColor: hexToRgba(originAccount.color || '#facc15', 0.30),
+                                           }}
+                                         >
+                                           {originAccount.name}
+                                         </span>
+                                       );
+                                     }
+                                     return null;
+                                   })()}
+                                   
+                                   {/* Setinha indicando direção da transferência */}
+                                   <span className="text-xs text-gray-500 flex items-center px-1">
+                                     →
+                                   </span>
+                                   
+                                   {/* Conta destino */}
+                                   {(() => {
+                                     const relatedTransactions = transactions.filter(tx => 
+                                       tx.transfer_id === t.transfer_id && isTransferTransaction(tx)
+                                     );
+                                     const destinationTransaction = relatedTransactions.find(tx => tx.type === 'income');
+                                     const destinationAccount = destinationTransaction ? accounts.find(acc => acc.id === destinationTransaction.account_id) : null;
+                                     
+                                     if (destinationAccount) {
+                                       return (
+                                         <span
+                                           className={`text-xs font-semibold rounded-full px-3 py-1 border`}
+                                           style={{
+                                             color: destinationAccount.color || '#facc15',
+                                             background: hexToRgba(destinationAccount.color || '#facc15', 0.10),
+                                             borderColor: hexToRgba(destinationAccount.color || '#facc15', 0.30),
+                                           }}
+                                         >
+                                           {destinationAccount.name}
+                                         </span>
+                                       );
+                                     }
+                                     return null;
+                                   })()}
+                                  
+                                  {/* Tag da categoria Transferência */}
+                                  <span
+                                    className={`text-xs font-semibold rounded-full px-3 py-1 border`}
+                                    style={{
+                                      color: getCategoryColor(t),
+                                      background: hexToRgba(getCategoryColor(t), 0.10),
+                                      borderColor: hexToRgba(getCategoryColor(t), 0.30),
+                                    }}
+                                  >
+                                    {getCategoryDisplayName(t)}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  {/* Tag da conta normal */}
+                                  <span
+                                    className={`text-xs font-semibold rounded-full px-3 py-1 border`}
+                                    style={{
+                                      color: acc?.color || '#facc15',
+                                      background: hexToRgba(acc?.color || '#facc15', 0.10),
+                                      borderColor: hexToRgba(acc?.color || '#facc15', 0.30),
+                                    }}
+                                  >
+                                    {acc?.name || '-'}
+                                  </span>
+                                  
+                                  {/* Tag da categoria normal */}
+                                  <span
+                                    className={`text-xs font-semibold rounded-full px-3 py-1 border`}
+                                    style={{
+                                      color: getCategoryColor(t),
+                                      background: hexToRgba(getCategoryColor(t), 0.10),
+                                      borderColor: hexToRgba(getCategoryColor(t), 0.30),
+                                    }}
+                                  >
+                                    {getCategoryDisplayName(t)}
+                                  </span>
+                                </>
+                              )}
                             </div>
                           </div>
                         </td>
@@ -950,9 +1104,15 @@ const TransactionsPage: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-4 py-3 align-middle text-center">
-                          <button className="inline-flex items-center p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar" onClick={() => handleEdit(t)}>
-                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M4 20h4.586a1 1 0 0 0 .707-.293l9.414-9.414a2 2 0 0 0 0-2.828l-2.172-2.172a2 2 0 0 0-2.828 0L4.293 15.293A1 1 0 0 0 4 16v4z" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          </button>
+                          {isTransferTransaction(t) ? (
+                            <button className="inline-flex items-center p-1 text-gray-400 cursor-not-allowed rounded" title="Transferências não podem ser editadas" disabled>
+                              <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M4 20h4.586a1 1 0 0 0 .707-.293l9.414-9.414a2 2 0 0 0 0-2.828l-2.172-2.172a2 2 0 0 0-2.828 0L4.293 15.293A1 1 0 0 0 4 16v4z" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            </button>
+                          ) : (
+                            <button className="inline-flex items-center p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar" onClick={() => handleEdit(t)}>
+                              <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M4 20h4.586a1 1 0 0 0 .707-.293l9.414-9.414a2 2 0 0 0 0-2.828l-2.172-2.172a2 2 0 0 0-2.828 0L4.293 15.293A1 1 0 0 0 4 16v4z" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            </button>
+                          )}
                           <button className="inline-flex items-center p-1 text-red-600 hover:bg-red-50 rounded ml-2" title="Excluir" onClick={() => handleDelete(t.id!)}>
                             <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3m-7 0h10" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                           </button>
