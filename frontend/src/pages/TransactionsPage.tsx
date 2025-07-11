@@ -1096,7 +1096,12 @@ const TransactionsPage: React.FC = () => {
                           })()}
                         </td>
                         <td className="px-4 py-3 align-middle text-right">
-                          <span className={`font-bold flex items-center gap-1 justify-end ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}> 
+                          <span className={`font-bold flex items-center gap-1 justify-end ${
+                            // Se é transferência e está mostrando todas as contas, cor neutra (preta)
+                            isTransferTransaction(t) && selectedBank === '' 
+                              ? 'text-gray-900' 
+                              : t.type === 'income' ? 'text-green-600' : 'text-red-600'
+                          }`}> 
                             {t.amount.toLocaleString('pt-BR', { 
                               style: 'currency', 
                               currency: acc?.currency || selectedCurrency 
