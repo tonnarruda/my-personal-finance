@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import TransactionForm from '../components/TransactionForm';
 import Select from '../components/Select';
+import CategorySelect from '../components/CategorySelect';
 import DateInput from '../components/DateInput';
 import { accountService, transactionService, categoryService } from '../services/api';
 import { Transaction } from '../types/transaction';
@@ -103,14 +104,28 @@ const TransactionsPage: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      const [accs, txs, cats] = await Promise.all([
+      const [accs, txs, incomeCategories, expenseCategories] = await Promise.all([
         accountService.getAllAccounts(),
         transactionService.getAllTransactions(),
-        categoryService.getAllCategories(),
+        categoryService.getCategoriesWithSubcategories('income'),
+        categoryService.getCategoriesWithSubcategories('expense'),
       ]);
       setAccounts(Array.isArray(accs) ? accs : []);
       setTransactions(Array.isArray(txs) ? txs.map(normalizeTransaction) : []);
-      setCategories(Array.isArray(cats) ? cats : []);
+      
+      // Combinar todas as categorias (principais e subcategorias) em uma lista plana
+      const allCategories: any[] = [];
+      const incomeList = Array.isArray(incomeCategories) ? incomeCategories : [];
+      const expenseList = Array.isArray(expenseCategories) ? expenseCategories : [];
+      
+      [...incomeList, ...expenseList].forEach(categoryWithSubs => {
+        allCategories.push(categoryWithSubs);
+        if (categoryWithSubs.subcategories) {
+          allCategories.push(...categoryWithSubs.subcategories);
+        }
+      });
+      
+      setCategories(allCategories);
     } catch (err) {
       setAccounts([]);
       setTransactions([]);
@@ -140,12 +155,44 @@ const TransactionsPage: React.FC = () => {
     return { month: d.getMonth() + 1, year: d.getFullYear() };
   }
 
+  // Função utilitária para parsear datas em formato ISO ou SQL
+  function parseDateString(dateStr: string | undefined): Date | null {
+    if (!dateStr) return null;
+    // Tenta ISO primeiro
+    let d = new Date(dateStr);
+    if (!isNaN(d.getTime())) return d;
+    // Tenta formato SQL (YYYY-MM-DD HH:MM:SS)
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      const [_, year, month, day] = match;
+      // Cria a data como local (ano, mês-1, dia)
+      return new Date(Number(year), Number(month) - 1, Number(day));
+    }
+    return null;
+  }
+
+  // Função para verificar se uma transação pertence a uma categoria ou suas subcategorias
+  function transactionMatchesCategory(transaction: Transaction, selectedCategoryId: string) {
+    if (!selectedCategoryId) return true; // Se nenhuma categoria selecionada, mostra todas
+    
+    // Verifica correspondência direta
+    if (transaction.category_id === selectedCategoryId) return true;
+    
+    // Verifica se a categoria da transação é subcategoria da categoria selecionada
+    const transactionCategory = categories.find(cat => cat.id === transaction.category_id);
+    if (transactionCategory && transactionCategory.parent_id === selectedCategoryId) {
+      return true;
+    }
+    
+    return false;
+  }
+
   // Aplique os filtros nas transações:
   const transactionsForCurrency = transactions.filter(t => {
     const acc = accounts.find(a => a.id === t.account_id);
     const { month, year } = extractMonthYear(t.competence_date);
     const bankMatch = selectedBank === '' || t.account_id === selectedBank;
-    const categoryMatch = selectedCategory === '' || t.category_id === selectedCategory;
+    const categoryMatch = transactionMatchesCategory(t, selectedCategory);
     
     // Filtro por range de data personalizado
     if (isCustomDateRange && customStartDate && customEndDate) {
@@ -276,22 +323,6 @@ const TransactionsPage: React.FC = () => {
 
   const cancelDeleteTransaction = () => setTransactionToDelete(null);
 
-  // Função utilitária para parsear datas em formato ISO ou SQL
-  function parseDateString(dateStr: string | undefined): Date | null {
-    if (!dateStr) return null;
-    // Tenta ISO primeiro
-    let d = new Date(dateStr);
-    if (!isNaN(d.getTime())) return d;
-    // Tenta formato SQL (YYYY-MM-DD HH:MM:SS)
-    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (match) {
-      const [_, year, month, day] = match;
-      // Cria a data como local (ano, mês-1, dia)
-      return new Date(Number(year), Number(month) - 1, Number(day));
-    }
-    return null;
-  }
-
   function formatDateBR(dateStr: string | undefined) {
     const d = parseDateString(dateStr);
     if (!d) return '-';
@@ -381,7 +412,7 @@ const TransactionsPage: React.FC = () => {
   const transacoesParaSaldoAnterior = transactions.filter(t => {
     const acc = accounts.find(a => a.id === t.account_id);
     const bankMatch = selectedBank === '' || t.account_id === selectedBank;
-    const categoryMatch = selectedCategory === '' || t.category_id === selectedCategory;
+    const categoryMatch = transactionMatchesCategory(t, selectedCategory);
     const competence = parseDateString(t.competence_date);
     
     // Para range personalizado, usar a data inicial do range como referência
@@ -404,41 +435,14 @@ const TransactionsPage: React.FC = () => {
       competence < periodoInicio
     );
 
-    // Debug logs
-    if (t.is_paid && acc && acc.currency === selectedCurrency) {
-      console.log('Transação para saldo anterior:', {
-        id: t.id,
-        description: t.description,
-        amount: t.amount,
-        type: t.type,
-        account: acc.name,
-        due_date: t.due_date,
-        competence_date: t.competence_date,
-        periodoInicio: periodoInicio,
-        competence: competence,
-        shouldInclude,
-        bankMatch,
-        categoryMatch
-      });
-    }
+
 
     return shouldInclude;
   });
 
   const saldoAnterior = transacoesParaSaldoAnterior.reduce((acc, t) => acc + (t.type === 'income' ? t.amount : -t.amount), 0);
 
-  // Debug log
-  console.log('Saldo anterior debug:', {
-    totalTransactions: transactions.length,
-    transacoesParaSaldoAnterior: transacoesParaSaldoAnterior.length,
-    saldoAnterior,
-    selectedCurrency,
-    selectedBank,
-    selectedCategory,
-    selectedMonthYear: selectedMonthYear,
-    isCustomDateRange,
-    customStartDate
-  });
+
 
   // Calcular saldo acumulado para cada dia (saldo do dia = saldo anterior + transações pagas do dia)
   let saldoAcumulado = saldoAnterior;
@@ -547,6 +551,35 @@ const TransactionsPage: React.FC = () => {
     setCustomEndDate(value);
   };
 
+  // Função para converter categorias estruturadas em opções do dropdown
+  const getCategoryOptions = () => {
+    const options = [];
+    
+    // Buscar apenas categorias principais para estruturar
+    const mainCategories = categories.filter(cat => !cat.parent_id);
+    
+    for (const mainCategory of mainCategories) {
+      // Adicionar categoria principal
+      options.push({
+        value: mainCategory.id,
+        label: mainCategory.name,
+        isSubcategory: false
+      });
+      
+      // Adicionar subcategorias
+      const subcategories = categories.filter(cat => cat.parent_id === mainCategory.id);
+      for (const subcategory of subcategories) {
+        options.push({
+          value: subcategory.id,
+          label: subcategory.name,
+          isSubcategory: true
+        });
+      }
+    }
+    
+    return options;
+  };
+
   return (
     <Layout>
       {/* Bloco fixo no topo, alinhado ao conteúdo principal */}
@@ -595,19 +628,19 @@ const TransactionsPage: React.FC = () => {
                   { value: '', label: 'Todos' },
                   ...(accountsByCurrency[selectedCurrency]?.map(acc => ({ value: acc.id, label: acc.name })) || [])
                 ]}
-                className="min-w-[120px]"
+                className="min-w-[200px]"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-              <Select
+              <CategorySelect
                 value={selectedCategory}
                 onChange={val => setSelectedCategory(val)}
                 options={[
                   { value: '', label: 'Todas' },
-                  ...categories.map(cat => ({ value: cat.id, label: cat.name }))
+                  ...getCategoryOptions()
                 ]}
-                className="min-w-[120px]"
+                className="min-w-[200px]"
               />
             </div>
           </div>
