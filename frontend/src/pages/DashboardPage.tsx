@@ -168,15 +168,38 @@ const DashboardPage: React.FC = () => {
   // Calcula mudança percentual do resultado mensal (apenas quando há dados históricos)
   const percentChangeResultado = hasHistoricalData && resultadoMesAnterior !== 0 ? ((resultadoMes - resultadoMesAnterior) / Math.abs(resultadoMesAnterior)) * 100 : 0;
 
-  // Agrupa receitas/despesas por categoria (excluindo transferências)
+  // Função auxiliar para encontrar a categoria pai (ou a própria categoria se for pai)
+  function getParentCategory(categoryId: string) {
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) return null;
+    
+    // Se a categoria tem parent_id, busca a categoria pai
+    if (category.parent_id) {
+      const parentCategory = categories.find(c => c.id === category.parent_id);
+      return parentCategory || category; // Se não encontrar pai, usa a própria categoria
+    }
+    
+    // Se não tem parent_id, é uma categoria pai
+    return category;
+  }
+
+  // Agrupa receitas/despesas por categoria pai (excluindo transferências)
   function groupByCategory(type: 'income' | 'expense') {
     const txs = transactionsForCurrency.filter(tx => tx.type === type && tx.is_paid && !isTransferTransaction(tx));
     const map: { [catId: string]: { label: string; value: number; color: string } } = {};
     txs.forEach(tx => {
-      const cat = categories.find(c => c.id === tx.category_id);
-      if (!cat) return;
-      if (!map[cat.id]) map[cat.id] = { label: cat.name, value: 0, color: cat.color };
-      map[cat.id].value += tx.amount / 100;
+      const parentCategory = getParentCategory(tx.category_id);
+      if (!parentCategory) return;
+      
+      // Agrupa por categoria pai
+      if (!map[parentCategory.id]) {
+        map[parentCategory.id] = { 
+          label: parentCategory.name, 
+          value: 0, 
+          color: parentCategory.color 
+        };
+      }
+      map[parentCategory.id].value += tx.amount / 100;
     });
     // Calcula percentuais e ordena por valor (do maior para o menor)
     const total = Object.values(map).reduce((sum, c) => sum + c.value, 0) || 1;
