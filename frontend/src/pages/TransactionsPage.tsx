@@ -7,6 +7,7 @@ import { accountService, transactionService, categoryService } from '../services
 import { Transaction } from '../types/transaction';
 import { getUser } from '../services/auth';
 import { useToast } from '../contexts/ToastContext';
+import { useSidebar } from '../contexts/SidebarContext';
 
 const monthNames = [
   'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
@@ -47,6 +48,7 @@ const TransactionsPage: React.FC = () => {
   const [isCustomDateRange, setIsCustomDateRange] = useState(false);
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+  const { isCollapsed } = useSidebar();
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -549,7 +551,11 @@ const TransactionsPage: React.FC = () => {
     <Layout>
       {/* Bloco fixo no topo, alinhado ao conteúdo principal */}
       <div
-        className="fixed top-0 left-64 w-[calc(100vw-16rem)] bg-white shadow z-50 px-4 sm:px-6 lg:px-8 pt-8 pb-4 flex flex-col"
+        className={`fixed top-0 bg-white shadow z-50 px-4 sm:px-6 lg:px-8 pt-8 pb-4 flex flex-col transition-all duration-300 ${
+          isCollapsed 
+            ? 'left-20 w-[calc(100vw-5rem)]' 
+            : 'left-64 w-[calc(100vw-16rem)]'
+        }`}
         style={{ minHeight: 200 }}
       >
         <div className="flex items-center justify-between mb-6">
