@@ -68,7 +68,7 @@ func (s *CategoryService) GetCategoryByID(id string) (*structs.Category, error) 
 	return category, nil
 }
 
-// GetAllCategories busca todas as categorias do usuário (incluindo padrão)
+// GetAllCategories busca todas as categorias do usuário
 func (s *CategoryService) GetAllCategories(userID string) ([]structs.Category, error) {
 	categories, err := s.db.GetAllCategories(userID)
 	if err != nil {
@@ -77,7 +77,7 @@ func (s *CategoryService) GetAllCategories(userID string) ([]structs.Category, e
 	return categories, nil
 }
 
-// GetCategoriesByType busca categorias por tipo (receita ou despesa) do usuário (incluindo padrão)
+// GetCategoriesByType busca categorias por tipo (receita ou despesa) do usuário
 func (s *CategoryService) GetCategoriesByType(userID string, categoryType structs.CategoryType) ([]structs.Category, error) {
 	categories, err := s.db.GetCategoriesByType(userID, categoryType)
 	if err != nil {
@@ -86,7 +86,7 @@ func (s *CategoryService) GetCategoriesByType(userID string, categoryType struct
 	return categories, nil
 }
 
-// GetCategoriesWithSubcategories busca categorias principais com suas subcategorias (incluindo padrão)
+// GetCategoriesWithSubcategories busca categorias principais com suas subcategorias
 func (s *CategoryService) GetCategoriesWithSubcategories(userID string, categoryType structs.CategoryType) ([]structs.CategoryWithSubcategories, error) {
 	// Buscar categorias principais (sem parent_id)
 	mainCategories, err := s.db.GetCategoriesByType(userID, categoryType)
@@ -113,7 +113,7 @@ func (s *CategoryService) GetCategoriesWithSubcategories(userID string, category
 	return result, nil
 }
 
-// GetSubcategories busca as subcategorias de uma categoria pai (incluindo padrão)
+// GetSubcategories busca as subcategorias de uma categoria pai
 func (s *CategoryService) GetSubcategories(parentID string, userID string) ([]structs.Category, error) {
 	// Validar se o parentID é um UUID válido
 	if !utils.IsValidUUID(parentID) {
@@ -174,6 +174,7 @@ func (s *CategoryService) UpdateCategory(id string, req structs.UpdateCategoryRe
 				Color:       req.Color, // Usar a nova cor da categoria pai
 				Icon:        subcategory.Icon,
 				IsActive:    &subcategory.IsActive,
+				Visible:     &subcategory.Visible,
 			}
 
 			if err := s.db.UpdateCategory(subcategory.ID, updateReq); err != nil {
@@ -308,6 +309,7 @@ func (s *CategoryService) UpdateCategoryColor(id string, color string, userID st
 		Color:       color,
 		Icon:        existingCategory.Icon,
 		IsActive:    &existingCategory.IsActive,
+		Visible:     &existingCategory.Visible,
 	}
 
 	// Atualizar a categoria
@@ -330,6 +332,7 @@ func (s *CategoryService) UpdateCategoryColor(id string, color string, userID st
 				Color:       color, // Usar a nova cor
 				Icon:        subcategory.Icon,
 				IsActive:    &subcategory.IsActive,
+				Visible:     &subcategory.Visible,
 			}
 
 			if err := s.db.UpdateCategory(subcategory.ID, subUpdateReq); err != nil {

@@ -19,6 +19,7 @@ type Transaction struct {
 	Installments        int        `json:"installments"`
 	CurrentInstallment  int        `json:"current_installment"`
 	ParentTransactionID *string    `json:"parent_transaction_id"`
+	TransferID          *string    `json:"transfer_id"`
 	CreatedAt           time.Time  `json:"created_at"`
 	UpdatedAt           time.Time  `json:"updated_at"`
 	DeletedAt           *time.Time `json:"deleted_at,omitempty"`

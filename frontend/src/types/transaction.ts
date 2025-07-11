@@ -1,4 +1,4 @@
-export type TransactionType = 'income' | 'expense';
+export type TransactionType = 'income' | 'expense' | 'transfer';
 
 export interface Transaction {
   id?: string;
@@ -15,6 +15,7 @@ export interface Transaction {
   created_at?: string;
   updated_at?: string;
   is_paid?: boolean;
+  transfer_id?: string;
 }
 
 export interface CreateTransactionRequest {
@@ -28,4 +29,5 @@ export interface CreateTransactionRequest {
   is_recurring?: boolean;
   observation?: string;
   is_paid?: boolean;
+  transfer_id?: string;
 } 

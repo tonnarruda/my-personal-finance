@@ -23,6 +23,8 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
 		return
 	}
+
+	// Preencher campos obrigatórios
 	if req.ID == "" {
 		req.ID = uuid.New().String()
 	}
@@ -30,11 +32,93 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 		req.CreatedAt = time.Now()
 	}
 	req.UpdatedAt = time.Now()
-	if err := h.DB.CreateTransaction(req); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+
+	// Verificar se é uma transferência
+	if req.Type == "transfer" {
+		// Para transferências, category_id contém o ID da conta destino
+		destAccountID := req.CategoryID
+
+		// Buscar ou criar a categoria "Transferência"
+		transferCategory, err := h.DB.EnsureTransferCategory()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to ensure transfer category", "details": err.Error()})
+			return
+		}
+
+		// Gerar ID único para vincular as duas transações
+		transferID := uuid.New().String()
+
+		// Criar transação de débito na conta origem
+		debitTx := structs.Transaction{
+			ID:                  uuid.New().String(),
+			UserID:              req.UserID,
+			Description:         req.Description,
+			Amount:              req.Amount,
+			Type:                "expense",
+			CategoryID:          transferCategory.ID,
+			AccountID:           req.AccountID, // Conta origem
+			DueDate:             req.DueDate,
+			CompetenceDate:      req.CompetenceDate,
+			IsPaid:              req.IsPaid,
+			Observation:         req.Observation,
+			IsRecurring:         req.IsRecurring,
+			RecurringType:       req.RecurringType,
+			Installments:        req.Installments,
+			CurrentInstallment:  req.CurrentInstallment,
+			ParentTransactionID: req.ParentTransactionID,
+			TransferID:          &transferID,
+			CreatedAt:           time.Now(),
+			UpdatedAt:           time.Now(),
+		}
+
+		// Criar transação de crédito na conta destino
+		creditTx := structs.Transaction{
+			ID:                  uuid.New().String(),
+			UserID:              req.UserID,
+			Description:         req.Description,
+			Amount:              req.Amount,
+			Type:                "income",
+			CategoryID:          transferCategory.ID,
+			AccountID:           destAccountID, // Conta destino
+			DueDate:             req.DueDate,
+			CompetenceDate:      req.CompetenceDate,
+			IsPaid:              req.IsPaid,
+			Observation:         req.Observation,
+			IsRecurring:         req.IsRecurring,
+			RecurringType:       req.RecurringType,
+			Installments:        req.Installments,
+			CurrentInstallment:  req.CurrentInstallment,
+			ParentTransactionID: req.ParentTransactionID,
+			TransferID:          &transferID,
+			CreatedAt:           time.Now(),
+			UpdatedAt:           time.Now(),
+		}
+
+		// Criar ambas as transações
+		if err := h.DB.CreateTransaction(debitTx); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create debit transaction", "details": err.Error()})
+			return
+		}
+
+		if err := h.DB.CreateTransaction(creditTx); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create credit transaction", "details": err.Error()})
+			return
+		}
+
+		// Retornar as duas transações criadas
+		c.JSON(http.StatusCreated, gin.H{
+			"debit_transaction":  debitTx,
+			"credit_transaction": creditTx,
+			"transfer_id":        transferID,
+		})
+	} else {
+		// Lógica normal para transações que não são transferências
+		if err := h.DB.CreateTransaction(req); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusCreated, req)
 	}
-	c.JSON(http.StatusCreated, req)
 }
 
 // GetAllTransactions lista todas as transações do usuário
@@ -101,9 +185,31 @@ func (h *TransactionHandler) DeleteTransaction(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "id and user_id are required"})
 		return
 	}
-	if err := h.DB.DeleteTransaction(id, userID); err != nil {
+
+	// Buscar a transação para verificar se é uma transferência
+	tx, err := h.DB.GetTransactionByID(id, userID)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	if tx == nil {
+		c.Status(http.StatusNotFound)
+		return
+	}
+
+	// Se a transação tem transfer_id, deletar todas as transações vinculadas
+	if tx.TransferID != nil && *tx.TransferID != "" {
+		if err := h.DB.DeleteTransactionsByTransferID(*tx.TransferID, userID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete transfer transactions", "details": err.Error()})
+			return
+		}
+	} else {
+		// Deletar apenas a transação individual
+		if err := h.DB.DeleteTransaction(id, userID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
 	c.Status(http.StatusNoContent)
 }

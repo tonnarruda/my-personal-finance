@@ -27,13 +27,18 @@ const DashboardPage: React.FC = () => {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
-  const [modalType, setModalType] = useState<'income' | 'expense'>('expense');
+  const [modalType, setModalType] = useState<'income' | 'expense' | 'transfer'>('expense');
   
   // Account modal state
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [accountModalLoading, setAccountModalLoading] = useState(false);
   
   const { showSuccess, showError } = useToast();
+
+  // Função para detectar se uma transação é uma transferência
+  const isTransferTransaction = (transaction: Transaction): boolean => {
+    return transaction.transfer_id !== undefined && transaction.transfer_id !== null && transaction.transfer_id !== '';
+  };
 
   // Atualizar dados mockados para serem por currency
   interface CategoriaData { label: string; value: number; percent: number; color: string; }
@@ -108,9 +113,9 @@ const DashboardPage: React.FC = () => {
     );
   });
 
-  // Calcula receitas, despesas e saldo do mês (apenas pagas, corrigindo para centavos)
-  const receitaMes = transactionsForCurrency.filter(tx => tx.type === 'income' && tx.is_paid).reduce((sum, tx) => sum + (tx.amount / 100), 0);
-  const despesaMes = transactionsForCurrency.filter(tx => tx.type === 'expense' && tx.is_paid).reduce((sum, tx) => sum + (tx.amount / 100), 0);
+  // Calcula receitas, despesas e saldo do mês (apenas pagas, corrigindo para centavos, excluindo transferências)
+  const receitaMes = transactionsForCurrency.filter(tx => tx.type === 'income' && tx.is_paid && !isTransferTransaction(tx)).reduce((sum, tx) => sum + (tx.amount / 100), 0);
+  const despesaMes = transactionsForCurrency.filter(tx => tx.type === 'expense' && tx.is_paid && !isTransferTransaction(tx)).reduce((sum, tx) => sum + (tx.amount / 100), 0);
   const resultadoMes = receitaMes - despesaMes;
 
   // Saldo atual acumulado de todas as transações pagas da moeda (corrigindo para centavos)
@@ -135,8 +140,8 @@ const DashboardPage: React.FC = () => {
     );
   });
 
-  const receitaMesAnterior = transactionsForCurrencyPreviousMonth.filter(tx => tx.type === 'income' && tx.is_paid).reduce((sum, tx) => sum + (tx.amount / 100), 0);
-  const despesaMesAnterior = transactionsForCurrencyPreviousMonth.filter(tx => tx.type === 'expense' && tx.is_paid).reduce((sum, tx) => sum + (tx.amount / 100), 0);
+  const receitaMesAnterior = transactionsForCurrencyPreviousMonth.filter(tx => tx.type === 'income' && tx.is_paid && !isTransferTransaction(tx)).reduce((sum, tx) => sum + (tx.amount / 100), 0);
+  const despesaMesAnterior = transactionsForCurrencyPreviousMonth.filter(tx => tx.type === 'expense' && tx.is_paid && !isTransferTransaction(tx)).reduce((sum, tx) => sum + (tx.amount / 100), 0);
   const resultadoMesAnterior = receitaMesAnterior - despesaMesAnterior;
 
   // Para o saldo, calculamos a variação considerando todos os dados históricos
@@ -163,9 +168,9 @@ const DashboardPage: React.FC = () => {
   // Calcula mudança percentual do resultado mensal (apenas quando há dados históricos)
   const percentChangeResultado = hasHistoricalData && resultadoMesAnterior !== 0 ? ((resultadoMes - resultadoMesAnterior) / Math.abs(resultadoMesAnterior)) * 100 : 0;
 
-  // Agrupa receitas/despesas por categoria
+  // Agrupa receitas/despesas por categoria (excluindo transferências)
   function groupByCategory(type: 'income' | 'expense') {
-    const txs = transactionsForCurrency.filter(tx => tx.type === type && tx.is_paid);
+    const txs = transactionsForCurrency.filter(tx => tx.type === type && tx.is_paid && !isTransferTransaction(tx));
     const map: { [catId: string]: { label: string; value: number; color: string } } = {};
     txs.forEach(tx => {
       const cat = categories.find(c => c.id === tx.category_id);
@@ -195,16 +200,16 @@ const DashboardPage: React.FC = () => {
       .reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount / 100 : -tx.amount / 100), 0);
   }
 
-  // Funções para calcular receitas e despesas por conta
+  // Funções para calcular receitas e despesas por conta (excluindo transferências)
   function getAccountIncome(accountId: string) {
     return transactionsForCurrency
-      .filter(tx => tx.account_id === accountId && tx.type === 'income' && tx.is_paid)
+      .filter(tx => tx.account_id === accountId && tx.type === 'income' && tx.is_paid && !isTransferTransaction(tx))
       .reduce((sum, tx) => sum + tx.amount / 100, 0);
   }
 
   function getAccountExpenses(accountId: string) {
     return transactionsForCurrency
-      .filter(tx => tx.account_id === accountId && tx.type === 'expense' && tx.is_paid)
+      .filter(tx => tx.account_id === accountId && tx.type === 'expense' && tx.is_paid && !isTransferTransaction(tx))
       .reduce((sum, tx) => sum + tx.amount / 100, 0);
   }
 
@@ -234,6 +239,11 @@ const DashboardPage: React.FC = () => {
 
   const handleOpenIncomeModal = () => {
     setModalType('income');
+    setIsModalOpen(true);
+  };
+
+  const handleOpenTransferModal = () => {
+    setModalType('transfer');
     setIsModalOpen(true);
   };
 
@@ -330,7 +340,7 @@ const DashboardPage: React.FC = () => {
     try {
       const payload = toBackendPayload(data);
       await transactionService.createTransaction(payload);
-      const transactionTypeName = data.type === 'income' ? 'Receita' : 'Despesa';
+      const transactionTypeName = data.type === 'income' ? 'Receita' : data.type === 'expense' ? 'Despesa' : 'Transferência';
       showSuccess(`${transactionTypeName} criada com sucesso!`);
       setIsModalOpen(false);
       // Reload data to reflect changes
@@ -392,7 +402,7 @@ const DashboardPage: React.FC = () => {
               <span className="text-3xl text-green-600 mb-2">&#43;</span>
               <span className="text-gray-700 text-base font-medium">RECEITA</span>
             </button>
-            <button className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl px-6 py-0 shadow-sm hover:bg-gray-100 transition">
+            <button onClick={handleOpenTransferModal} className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl px-6 py-0 shadow-sm hover:bg-gray-100 transition">
               <span className="text-2xl text-gray-500 mb-2">
                 <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M7 12h10M16 9l3 3-3 3" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </span>
