@@ -5,6 +5,7 @@ import CategoryList from '../components/CategoryList';
 import CategoryForm from '../components/CategoryForm';
 import Layout from '../components/Layout';
 import { useToast } from '../contexts/ToastContext';
+import { useSidebar } from '../contexts/SidebarContext';
 
 const CategoriesPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -15,6 +16,7 @@ const CategoriesPage: React.FC = () => {
   const [parentCategory, setParentCategory] = useState<Category | undefined>();
   const [showInactive, setShowInactive] = useState(false);
   const { showSuccess, showError } = useToast();
+  const { isCollapsed } = useSidebar();
 
   useEffect(() => {
     loadCategories();
@@ -156,7 +158,11 @@ const CategoriesPage: React.FC = () => {
     <Layout>
       {/* Bloco fixo no topo, alinhado ao conteúdo principal */}
       <div
-        className="fixed top-0 left-64 w-[calc(100vw-16rem)] bg-white shadow z-50 px-4 sm:px-6 lg:px-8 pt-8 pb-4 flex flex-col"
+        className={`fixed top-0 bg-white shadow z-50 px-4 sm:px-6 lg:px-8 pt-8 pb-4 flex flex-col transition-all duration-300 ${
+          isCollapsed 
+            ? 'left-20 w-[calc(100vw-5rem)]' 
+            : 'left-64 w-[calc(100vw-16rem)]'
+        }`}
         style={{ minHeight: 110 }}
       >
         <div className="flex items-center justify-between mb-6">
