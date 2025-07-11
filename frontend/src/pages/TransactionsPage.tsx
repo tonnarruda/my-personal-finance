@@ -102,6 +102,42 @@ const TransactionsPage: React.FC = () => {
     return cat?.color || '#a7f3d0';
   };
 
+  // Função para determinar o status da transação e retornar as informações de exibição
+  const getTransactionStatus = (transaction: Transaction) => {
+    if (transaction.is_paid) {
+      return {
+        text: 'Pago',
+        className: 'bg-green-100 text-green-700'
+      };
+    }
+
+    // Verificar se está vencida ou vencendo hoje
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+    
+    const dueDate = parseDateString(transaction.due_date);
+    if (dueDate) {
+      const dueDateString = dueDate.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+      
+      if (dueDateString < todayString) {
+        return {
+          text: 'Vencida',
+          className: 'bg-red-100 text-red-700'
+        };
+      } else if (dueDateString === todayString) {
+        return {
+          text: 'Vencendo Hoje',
+          className: 'bg-purple-100 text-purple-700'
+        };
+      }
+    }
+
+    return {
+      text: 'Pendente',
+      className: 'bg-yellow-100 text-yellow-700'
+    };
+  };
+
   const fetchData = async () => {
     try {
       const [accs, txs, incomeCategories, expenseCategories] = await Promise.all([
@@ -853,9 +889,14 @@ const TransactionsPage: React.FC = () => {
                         <td className="px-4 py-3 align-middle text-left">{formatDateBR(t.due_date)}</td>
                         <td className="px-4 py-3 align-middle text-left">{formatCompetenceBR(t.competence_date)}</td>
                         <td className="px-4 py-3 align-middle text-left">
-                          <span className={`text-xs font-semibold rounded px-2 py-0.5 ${t.is_paid ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                            {t.is_paid ? 'Pago' : 'Pendente'}
-                          </span>
+                          {(() => {
+                            const status = getTransactionStatus(t);
+                            return (
+                              <span className={`text-xs font-semibold rounded px-2 py-0.5 ${status.className}`}>
+                                {status.text}
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td className="px-4 py-3 align-middle text-right">
                           <span className={`font-bold flex items-center gap-1 justify-end ${t.type === 'income' ? 'text-green-600' : 'text-red-600'}`}> 
