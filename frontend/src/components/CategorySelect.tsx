@@ -4,6 +4,7 @@ interface CategoryOption {
   value: string;
   label: string;
   isSubcategory?: boolean;
+  isHeader?: boolean;
 }
 
 interface CategorySelectProps {
@@ -78,6 +79,9 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
   };
 
   const handleOptionClick = (option: CategoryOption) => {
+    // Não fazer nada se for um header
+    if (option.isHeader) return;
+    
     onChange(option.value);
     setIsOpen(false);
     setHighlightedIndex(-1);
@@ -143,6 +147,35 @@ const CategorySelect: React.FC<CategorySelectProps> = ({
             {options.map((option, index) => {
               const isFirstMainCategory = !option.isSubcategory && index > 0 && options[index - 1]?.isSubcategory;
               const isLastSubcategory = option.isSubcategory && (index === options.length - 1 || !options[index + 1]?.isSubcategory);
+              
+              // Renderização especial para headers
+              if (option.isHeader) {
+                const isIncomeHeader = option.value === 'HEADER_RECEITAS';
+                const isExpenseHeader = option.value === 'HEADER_DESPESAS';
+                
+                return (
+                  <li
+                    key={option.value}
+                    className={`px-4 py-2 border-t cursor-default ${
+                      isIncomeHeader 
+                        ? 'bg-gradient-to-r from-green-100 to-green-200 border-green-300'
+                        : isExpenseHeader
+                        ? 'bg-gradient-to-r from-red-100 to-red-200 border-red-300'
+                        : 'bg-gradient-to-r from-gray-100 to-gray-200 border-gray-300'
+                    }`}
+                  >
+                    <span className={`text-xs font-bold uppercase tracking-wide ${
+                      isIncomeHeader 
+                        ? 'text-green-700'
+                        : isExpenseHeader
+                        ? 'text-red-700'
+                        : 'text-gray-700'
+                    }`}>
+                      {option.label}
+                    </span>
+                  </li>
+                );
+              }
               
               return (
                 <li

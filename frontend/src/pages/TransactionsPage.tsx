@@ -597,22 +597,65 @@ const TransactionsPage: React.FC = () => {
     // Buscar apenas categorias principais para estruturar
     const mainCategories = categories.filter(cat => !cat.parent_id);
     
-    for (const mainCategory of mainCategories) {
-      // Adicionar categoria principal
+    // Primeiro, adicionar categorias de receita (income)
+    const incomeCategories = mainCategories.filter(cat => cat.type === 'income');
+    if (incomeCategories.length > 0) {
+      // Adicionar header de receitas
       options.push({
-        value: mainCategory.id,
-        label: mainCategory.name,
-        isSubcategory: false
+        value: 'HEADER_RECEITAS',
+        label: '💰 RECEITAS',
+        isSubcategory: false,
+        isHeader: true
       });
       
-      // Adicionar subcategorias
-      const subcategories = categories.filter(cat => cat.parent_id === mainCategory.id);
-      for (const subcategory of subcategories) {
+      for (const mainCategory of incomeCategories) {
+        // Adicionar categoria principal
         options.push({
-          value: subcategory.id,
-          label: subcategory.name,
-          isSubcategory: true
+          value: mainCategory.id,
+          label: mainCategory.name,
+          isSubcategory: false
         });
+        
+        // Adicionar subcategorias
+        const subcategories = categories.filter(cat => cat.parent_id === mainCategory.id);
+        for (const subcategory of subcategories) {
+          options.push({
+            value: subcategory.id,
+            label: subcategory.name,
+            isSubcategory: true
+          });
+        }
+      }
+    }
+    
+    // Depois, adicionar categorias de despesa (expense)
+    const expenseCategories = mainCategories.filter(cat => cat.type === 'expense');
+    if (expenseCategories.length > 0) {
+      // Adicionar header de despesas
+      options.push({
+        value: 'HEADER_DESPESAS',
+        label: '💸 DESPESAS',
+        isSubcategory: false,
+        isHeader: true
+      });
+      
+      for (const mainCategory of expenseCategories) {
+        // Adicionar categoria principal
+        options.push({
+          value: mainCategory.id,
+          label: mainCategory.name,
+          isSubcategory: false
+        });
+        
+        // Adicionar subcategorias
+        const subcategories = categories.filter(cat => cat.parent_id === mainCategory.id);
+        for (const subcategory of subcategories) {
+          options.push({
+            value: subcategory.id,
+            label: subcategory.name,
+            isSubcategory: true
+          });
+        }
       }
     }
     
