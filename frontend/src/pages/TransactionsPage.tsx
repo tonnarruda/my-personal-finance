@@ -11,8 +11,8 @@ import { useToast } from '../contexts/ToastContext';
 import { useSidebar } from '../contexts/SidebarContext';
 
 const monthNames = [
-  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
 // Função para gerar cor RGBA a partir do hex e opacidade
