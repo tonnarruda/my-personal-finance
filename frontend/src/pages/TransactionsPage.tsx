@@ -440,7 +440,9 @@ const TransactionsPage: React.FC = () => {
     return shouldInclude;
   });
 
-  const saldoAnterior = transacoesParaSaldoAnterior.reduce((acc, t) => acc + (t.type === 'income' ? t.amount : -t.amount), 0);
+  const saldoAnteriorCalc = transacoesParaSaldoAnterior.reduce((acc, t) => acc + (t.type === 'income' ? t.amount : -t.amount), 0);
+  // Garante que zero seja sempre positivo (evita -0)
+  const saldoAnterior = saldoAnteriorCalc === 0 ? 0 : saldoAnteriorCalc;
 
 
 
@@ -456,7 +458,8 @@ const TransactionsPage: React.FC = () => {
       return acc;
     }, 0);
     saldoAcumulado += somaDoDia;
-    saldoPorDia[dateKey] = saldoAcumulado;
+    // Garante que zero seja sempre positivo (evita -0)
+    saldoPorDia[dateKey] = saldoAcumulado === 0 ? 0 : saldoAcumulado;
   }
 
   // Função para decidir cor do texto baseada na cor de fundo (hex)

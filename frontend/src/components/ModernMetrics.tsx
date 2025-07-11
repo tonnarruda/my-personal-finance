@@ -40,12 +40,14 @@ const ModernMetrics: React.FC<ModernMetricsProps> = ({
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
     const formatCurrency = (value: number) => {
+      // Garante que zero seja sempre positivo (evita -0)
+      const normalizedValue = value === 0 ? 0 : value;
       return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: currency,
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
-      }).format(value);
+      }).format(normalizedValue);
     };
 
     const getTooltipContent = (label: string, currentValue: number, previousValue: number, change: number) => {

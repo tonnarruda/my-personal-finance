@@ -114,17 +114,24 @@ const DashboardPage: React.FC = () => {
   });
 
   // Calcula receitas, despesas e saldo do mês (apenas pagas, corrigindo para centavos, excluindo transferências)
-  const receitaMes = transactionsForCurrency.filter(tx => tx.type === 'income' && tx.is_paid && !isTransferTransaction(tx)).reduce((sum, tx) => sum + (tx.amount / 100), 0);
-  const despesaMes = transactionsForCurrency.filter(tx => tx.type === 'expense' && tx.is_paid && !isTransferTransaction(tx)).reduce((sum, tx) => sum + (tx.amount / 100), 0);
-  const resultadoMes = receitaMes - despesaMes;
+  const receitaMesCalc = transactionsForCurrency.filter(tx => tx.type === 'income' && tx.is_paid && !isTransferTransaction(tx)).reduce((sum, tx) => sum + (tx.amount / 100), 0);
+  const despesaMesCalc = transactionsForCurrency.filter(tx => tx.type === 'expense' && tx.is_paid && !isTransferTransaction(tx)).reduce((sum, tx) => sum + (tx.amount / 100), 0);
+  const resultadoMesCalc = receitaMesCalc - despesaMesCalc;
+  
+  // Garante que zeros sejam sempre positivos (evita -0)
+  const receitaMes = receitaMesCalc === 0 ? 0 : receitaMesCalc;
+  const despesaMes = despesaMesCalc === 0 ? 0 : despesaMesCalc;
+  const resultadoMes = resultadoMesCalc === 0 ? 0 : resultadoMesCalc;
 
   // Saldo atual acumulado de todas as transações pagas da moeda (corrigindo para centavos)
-  const saldoAtual = transactions
+  const saldoAtualCalc = transactions
     .filter(tx => {
       const acc = accounts.find(a => a.id === tx.account_id);
       return acc && acc.currency === selectedCurrency && tx.is_paid;
     })
     .reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount / 100 : -tx.amount / 100), 0);
+  // Garante que zero seja sempre positivo (evita -0)
+  const saldoAtual = saldoAtualCalc === 0 ? 0 : saldoAtualCalc;
 
   // Calcula dados do mês anterior para comparação
   const previousMonth = currentMonth === 1 ? 12 : currentMonth - 1;
@@ -140,12 +147,17 @@ const DashboardPage: React.FC = () => {
     );
   });
 
-  const receitaMesAnterior = transactionsForCurrencyPreviousMonth.filter(tx => tx.type === 'income' && tx.is_paid && !isTransferTransaction(tx)).reduce((sum, tx) => sum + (tx.amount / 100), 0);
-  const despesaMesAnterior = transactionsForCurrencyPreviousMonth.filter(tx => tx.type === 'expense' && tx.is_paid && !isTransferTransaction(tx)).reduce((sum, tx) => sum + (tx.amount / 100), 0);
-  const resultadoMesAnterior = receitaMesAnterior - despesaMesAnterior;
+  const receitaMesAnteriorCalc = transactionsForCurrencyPreviousMonth.filter(tx => tx.type === 'income' && tx.is_paid && !isTransferTransaction(tx)).reduce((sum, tx) => sum + (tx.amount / 100), 0);
+  const despesaMesAnteriorCalc = transactionsForCurrencyPreviousMonth.filter(tx => tx.type === 'expense' && tx.is_paid && !isTransferTransaction(tx)).reduce((sum, tx) => sum + (tx.amount / 100), 0);
+  const resultadoMesAnteriorCalc = receitaMesAnteriorCalc - despesaMesAnteriorCalc;
+  
+  // Garante que zeros sejam sempre positivos (evita -0)
+  const receitaMesAnterior = receitaMesAnteriorCalc === 0 ? 0 : receitaMesAnteriorCalc;
+  const despesaMesAnterior = despesaMesAnteriorCalc === 0 ? 0 : despesaMesAnteriorCalc;
+  const resultadoMesAnterior = resultadoMesAnteriorCalc === 0 ? 0 : resultadoMesAnteriorCalc;
 
   // Para o saldo, calculamos a variação considerando todos os dados históricos
-  const saldoMesAnterior = transactions
+  const saldoMesAnteriorCalc = transactions
     .filter(tx => {
       const txDate = new Date(tx.competence_date || tx.due_date);
       const acc = accounts.find(a => a.id === tx.account_id);
@@ -156,6 +168,8 @@ const DashboardPage: React.FC = () => {
       );
     })
     .reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount / 100 : -tx.amount / 100), 0);
+  // Garante que zero seja sempre positivo (evita -0)
+  const saldoMesAnterior = saldoMesAnteriorCalc === 0 ? 0 : saldoMesAnteriorCalc;
 
   // Verifica se há dados históricos para comparação
   const hasHistoricalData = transactionsForCurrencyPreviousMonth.length > 0;
@@ -212,15 +226,19 @@ const DashboardPage: React.FC = () => {
 
   // Função para calcular o saldo confirmado (pagos) de uma conta
   function getAccountConfirmedBalance(accountId: string) {
-    return transactions
+    const balance = transactions
       .filter(tx => tx.account_id === accountId && tx.is_paid)
       .reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount / 100 : -tx.amount / 100), 0);
+    // Garante que zero seja sempre positivo (evita -0)
+    return balance === 0 ? 0 : balance;
   }
   // Função para calcular o saldo projetado (pagos e não pagos) de uma conta
   function getAccountProjectedBalance(accountId: string) {
-    return transactions
+    const balance = transactions
       .filter(tx => tx.account_id === accountId)
       .reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount / 100 : -tx.amount / 100), 0);
+    // Garante que zero seja sempre positivo (evita -0)
+    return balance === 0 ? 0 : balance;
   }
 
 
@@ -229,6 +247,9 @@ const DashboardPage: React.FC = () => {
   const accountsForCurrency = accounts.filter(acc => acc.currency === selectedCurrency);
   const totalConfirmed = accountsForCurrency.reduce((sum, acc) => sum + getAccountConfirmedBalance(acc.id), 0);
   const totalProjected = accountsForCurrency.reduce((sum, acc) => sum + getAccountProjectedBalance(acc.id), 0);
+  // Garante que zeros sejam sempre positivos
+  const totalConfirmedSafe = totalConfirmed === 0 ? 0 : totalConfirmed;
+  const totalProjectedSafe = totalProjected === 0 ? 0 : totalProjected;
   
   const currencySymbols: Record<string, string> = { BRL: 'R$', EUR: '€', USD: 'US$', GBP: '£' };
 
@@ -505,8 +526,8 @@ const DashboardPage: React.FC = () => {
                   ))}
                   <tr className="font-bold">
                     <td className="py-3 text-gray-900">Total</td>
-                    <td className="py-3 text-green-600 font-bold text-right min-w-[100px]">{currencySymbols[selectedCurrency] || ''} {totalConfirmed.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                    <td className="py-3 text-green-600 font-bold text-right min-w-[100px]">{currencySymbols[selectedCurrency] || ''} {totalProjected.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                    <td className="py-3 text-green-600 font-bold text-right min-w-[100px]">{currencySymbols[selectedCurrency] || ''} {totalConfirmedSafe.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                    <td className="py-3 text-green-600 font-bold text-right min-w-[100px]">{currencySymbols[selectedCurrency] || ''} {totalProjectedSafe.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                   </tr>
                 </tbody>
               </table>

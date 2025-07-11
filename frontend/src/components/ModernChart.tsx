@@ -48,12 +48,14 @@ const ModernChart: React.FC<ModernChartProps> = ({
   const resultadoColor = resultado >= 0 ? '#22c55e' : '#ef4444';
   
   const formatCurrency = (value: number) => {
+    // Garante que zero seja sempre positivo (evita -0)
+    const normalizedValue = value === 0 ? 0 : value;
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: data.currency,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(value);
+    }).format(normalizedValue);
   };
   
   const formatValue = (value: number) => {
