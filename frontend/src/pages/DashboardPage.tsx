@@ -34,9 +34,18 @@ const DashboardPage: React.FC = () => {
   const [accountModalLoading, setAccountModalLoading] = useState(false);
   
   // Estado para controlar se devem mostrar contas com saldo zerado
-  const [hideZeroBalanceAccounts, setHideZeroBalanceAccounts] = useState(false);
+  const [hideZeroBalanceAccounts, setHideZeroBalanceAccounts] = useState(() => {
+    // Carregar estado do localStorage na inicialização
+    const saved = localStorage.getItem('hideZeroBalanceAccounts');
+    return saved === 'true';
+  });
   
   const { showSuccess, showError } = useToast();
+
+  // Salvar estado do checkbox no localStorage quando mudar
+  useEffect(() => {
+    localStorage.setItem('hideZeroBalanceAccounts', hideZeroBalanceAccounts.toString());
+  }, [hideZeroBalanceAccounts]);
 
   // Função para detectar se uma transação é uma transferência
   const isTransferTransaction = (transaction: Transaction): boolean => {
@@ -244,6 +253,18 @@ const DashboardPage: React.FC = () => {
     return balance === 0 ? 0 : balance;
   }
 
+  // Função helper para formatar valores monetários garantindo que zero seja sempre positivo
+  function formatCurrency(value: number): string {
+    // Garante que zero seja sempre positivo (evita -0)
+    const normalizedValue = value === 0 ? 0 : value;
+    return normalizedValue.toLocaleString('pt-BR', { 
+      style: 'currency', 
+      currency: selectedCurrency, 
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2 
+    });
+  }
+
 
 
   // Saldos das contas (se disponível)
@@ -254,7 +275,10 @@ const DashboardPage: React.FC = () => {
     ? accountsForCurrency.filter(acc => {
         const confirmedBalance = getAccountConfirmedBalance(acc.id);
         const projectedBalance = getAccountProjectedBalance(acc.id);
-        return confirmedBalance !== 0 || projectedBalance !== 0;
+        // Esconder apenas contas que tenham AMBOS os saldos zerados (com tolerância para flutuação)
+        const isConfirmedZero = Math.abs(confirmedBalance) < 0.01;
+        const isProjectedZero = Math.abs(projectedBalance) < 0.01;
+        return !(isConfirmedZero && isProjectedZero);
       })
     : accountsForCurrency;
   
@@ -552,10 +576,10 @@ const DashboardPage: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-3 text-green-600 font-semibold text-base text-right min-w-[100px]">
-                          {getAccountConfirmedBalance(account.id).toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency, minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {formatCurrency(getAccountConfirmedBalance(account.id))}
                         </td>
                         <td className="py-3 text-green-600 font-semibold text-base text-right min-w-[100px]">
-                          {getAccountProjectedBalance(account.id).toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency, minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {formatCurrency(getAccountProjectedBalance(account.id))}
                         </td>
                       </tr>
                     ))
