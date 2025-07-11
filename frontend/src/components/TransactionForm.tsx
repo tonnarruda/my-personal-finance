@@ -352,7 +352,7 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
               options={[
                 { value: '', label: 'Selecione um banco' },
                 ...accounts
-                  .filter(acc => acc.currency === currency)
+                  .filter(acc => acc.currency === currency && acc.is_active)
                   .map(acc => ({ value: acc.id, label: acc.name }))
               ]}
               error={!!errors.account_id}
@@ -370,7 +370,7 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
                 options={[
                   { value: '', label: 'Selecione um banco' },
                   ...accounts
-                    .filter(acc => acc.currency === currency)
+                    .filter(acc => acc.currency === currency && acc.is_active)
                     .map(acc => ({ value: acc.id, label: acc.name }))
                 ]}
                 error={!!errors.category_id}
