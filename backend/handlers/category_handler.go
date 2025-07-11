@@ -131,9 +131,9 @@ func (h *CategoryHandler) GetCategoriesByType(c *gin.Context) {
 	}
 
 	// Validar o tipo da categoria
-	if categoryType != string(structs.CategoryTypeIncome) && categoryType != string(structs.CategoryTypeExpense) {
+	if categoryType != string(structs.CategoryTypeIncome) && categoryType != string(structs.CategoryTypeExpense) && categoryType != string(structs.CategoryTypeTransfer) {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Tipo da categoria deve ser 'income' ou 'expense'",
+			"error": "Tipo da categoria deve ser 'income', 'expense' ou 'transfer'",
 		})
 		return
 	}
@@ -171,9 +171,9 @@ func (h *CategoryHandler) GetCategoriesWithSubcategories(c *gin.Context) {
 	}
 
 	// Validar o tipo da categoria
-	if categoryType != string(structs.CategoryTypeIncome) && categoryType != string(structs.CategoryTypeExpense) {
+	if categoryType != string(structs.CategoryTypeIncome) && categoryType != string(structs.CategoryTypeExpense) && categoryType != string(structs.CategoryTypeTransfer) {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Tipo da categoria deve ser 'income' ou 'expense'",
+			"error": "Tipo da categoria deve ser 'income', 'expense' ou 'transfer'",
 		})
 		return
 	}

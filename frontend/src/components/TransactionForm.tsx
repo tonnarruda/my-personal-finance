@@ -186,7 +186,12 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
     if (!form.due_date) newErrors.due_date = 'Data obrigatória';
     if (!form.competence_date) newErrors.competence_date = 'Competência obrigatória';
     if (!form.account_id) newErrors.account_id = 'Conta obrigatória';
-    if (!form.category_id) newErrors.category_id = 'Categoria obrigatória';
+    // Para transferência, category_id representa a conta destino
+    if (form.type === 'transfer') {
+      if (!form.category_id) newErrors.category_id = 'Conta destino obrigatória';
+    } else {
+      if (!form.category_id) newErrors.category_id = 'Categoria obrigatória';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -270,12 +275,13 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
       {/* Header */}
       <div className="text-center mb-6">
         <h2 className="text-3xl font-bold text-gray-900 mb-3">
-          {id ? 'Editar transação' : `Nova ${form.type === 'income' ? 'receita' : 'despesa'}`}
+          {id ? 'Editar transação' : `Nova ${form.type === 'income' ? 'receita' : form.type === 'expense' ? 'despesa' : 'transferência'}`}
         </h2>
           {/* Tipo */}
-          <div className="flex gap-2 justify-center max-w-md mx-auto">
+          <div className="flex gap-2 justify-center max-w-lg mx-auto">
             <button type="button" onClick={() => handleChange('type', 'income')} className={`flex-1 px-0 py-2 rounded-lg border text-sm font-semibold transition-all ${form.type === 'income' ? 'bg-green-50 border-green-200 text-green-700 ring-2 ring-green-200' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Receita</button>
             <button type="button" onClick={() => handleChange('type', 'expense')} className={`flex-1 px-0 py-2 rounded-lg border text-sm font-semibold transition-all ${form.type === 'expense' ? 'bg-red-50 border-red-400 text-red-600 ring-2 ring-red-200' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Despesa</button>
+            <button type="button" onClick={() => handleChange('type', 'transfer')} className={`flex-1 px-0 py-2 rounded-lg border text-sm font-semibold transition-all ${form.type === 'transfer' ? 'bg-gray-50 border-gray-400 text-gray-600 ring-2 ring-gray-200' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Transferência</button>
           </div>
         </div>
         {/* Primeira linha: Valor, Data, Competência e Status */}
@@ -337,7 +343,9 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
         {/* Terceira linha: Conta e Categoria */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Conta/Cartão</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {form.type === 'transfer' ? 'Conta origem' : 'Conta/Cartão'}
+            </label>
             <AccountSelect
               value={form.account_id}
               onChange={(value) => handleChange('account_id', value)}
@@ -352,16 +360,32 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
             {errors.account_id && <span className="text-xs text-red-500">{errors.account_id}</span>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-            <CategorySelect
-              value={form.category_id}
-              onChange={(value) => handleChange('category_id', value)}
-              options={[
-                { value: '', label: 'Buscar a categoria..' },
-                ...getCategoryOptions()
-              ]}
-              error={!!errors.category_id}
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {form.type === 'transfer' ? 'Conta destino' : 'Categoria'}
+            </label>
+            {form.type === 'transfer' ? (
+              <AccountSelect
+                value={form.category_id}
+                onChange={(value) => handleChange('category_id', value)}
+                options={[
+                  { value: '', label: 'Selecione um banco' },
+                  ...accounts
+                    .filter(acc => acc.currency === currency)
+                    .map(acc => ({ value: acc.id, label: acc.name }))
+                ]}
+                error={!!errors.category_id}
+              />
+            ) : (
+              <CategorySelect
+                value={form.category_id}
+                onChange={(value) => handleChange('category_id', value)}
+                options={[
+                  { value: '', label: 'Buscar a categoria..' },
+                  ...getCategoryOptions()
+                ]}
+                error={!!errors.category_id}
+              />
+            )}
             {errors.category_id && <span className="text-xs text-red-500">{errors.category_id}</span>}
           </div>
         </div>
@@ -443,7 +467,7 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
           className="w-full py-4 rounded-xl text-lg font-bold bg-[#f1f3fe] text-[#6366f1] shadow hover:bg-indigo-100 transition disabled:opacity-50"
           disabled={isLoading || submitting}
         >
-          {id ? 'Salvar' : (form.type === 'income' ? 'Adicionar Receita' : 'Adicionar Despesa')}
+          {id ? 'Salvar' : (form.type === 'income' ? 'Adicionar Receita' : form.type === 'expense' ? 'Adicionar Despesa' : 'Adicionar Transferência')}
         </button>
         <button
           type="button"

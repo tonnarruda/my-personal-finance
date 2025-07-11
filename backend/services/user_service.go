@@ -113,8 +113,8 @@ func (s *UserService) createDefaultCategoriesForUser(userID string) error {
 	}
 
 	insertQuery := `
-		INSERT INTO categories (id, name, description, type, color, icon, parent_id, is_active, created_at, updated_at, user_id)
-		VALUES (gen_random_uuid()::VARCHAR(36), $1, $2, $3, $4, $5, $6, $7, NOW(), NOW(), $8)
+		INSERT INTO categories (id, name, description, type, color, icon, parent_id, is_active, visible, created_at, updated_at, user_id)
+		VALUES (gen_random_uuid()::VARCHAR(36), $1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW(), $9)
 	`
 
 	for _, category := range defaultCategories {
@@ -136,6 +136,7 @@ func (s *UserService) createDefaultCategoriesForUser(userID string) error {
 				category.icon,
 				nil,  // parent_id
 				true, // is_active
+				true, // visible
 				userID,
 			)
 			if err != nil {

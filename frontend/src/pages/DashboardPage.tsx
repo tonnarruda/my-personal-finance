@@ -27,13 +27,18 @@ const DashboardPage: React.FC = () => {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
-  const [modalType, setModalType] = useState<'income' | 'expense'>('expense');
+  const [modalType, setModalType] = useState<'income' | 'expense' | 'transfer'>('expense');
   
   // Account modal state
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [accountModalLoading, setAccountModalLoading] = useState(false);
   
   const { showSuccess, showError } = useToast();
+
+  // Função para detectar se uma transação é uma transferência
+  const isTransferTransaction = (transaction: Transaction): boolean => {
+    return transaction.transfer_id !== undefined && transaction.transfer_id !== null && transaction.transfer_id !== '';
+  };
 
   // Atualizar dados mockados para serem por currency
   interface CategoriaData { label: string; value: number; percent: number; color: string; }
@@ -108,9 +113,9 @@ const DashboardPage: React.FC = () => {
     );
   });
 
-  // Calcula receitas, despesas e saldo do mês (apenas pagas, corrigindo para centavos)
-  const receitaMes = transactionsForCurrency.filter(tx => tx.type === 'income' && tx.is_paid).reduce((sum, tx) => sum + (tx.amount / 100), 0);
-  const despesaMes = transactionsForCurrency.filter(tx => tx.type === 'expense' && tx.is_paid).reduce((sum, tx) => sum + (tx.amount / 100), 0);
+  // Calcula receitas, despesas e saldo do mês (apenas pagas, corrigindo para centavos, excluindo transferências)
+  const receitaMes = transactionsForCurrency.filter(tx => tx.type === 'income' && tx.is_paid && !isTransferTransaction(tx)).reduce((sum, tx) => sum + (tx.amount / 100), 0);
+  const despesaMes = transactionsForCurrency.filter(tx => tx.type === 'expense' && tx.is_paid && !isTransferTransaction(tx)).reduce((sum, tx) => sum + (tx.amount / 100), 0);
   const resultadoMes = receitaMes - despesaMes;
 
   // Saldo atual acumulado de todas as transações pagas da moeda (corrigindo para centavos)
@@ -135,8 +140,8 @@ const DashboardPage: React.FC = () => {
     );
   });
 
-  const receitaMesAnterior = transactionsForCurrencyPreviousMonth.filter(tx => tx.type === 'income' && tx.is_paid).reduce((sum, tx) => sum + (tx.amount / 100), 0);
-  const despesaMesAnterior = transactionsForCurrencyPreviousMonth.filter(tx => tx.type === 'expense' && tx.is_paid).reduce((sum, tx) => sum + (tx.amount / 100), 0);
+  const receitaMesAnterior = transactionsForCurrencyPreviousMonth.filter(tx => tx.type === 'income' && tx.is_paid && !isTransferTransaction(tx)).reduce((sum, tx) => sum + (tx.amount / 100), 0);
+  const despesaMesAnterior = transactionsForCurrencyPreviousMonth.filter(tx => tx.type === 'expense' && tx.is_paid && !isTransferTransaction(tx)).reduce((sum, tx) => sum + (tx.amount / 100), 0);
   const resultadoMesAnterior = receitaMesAnterior - despesaMesAnterior;
 
   // Para o saldo, calculamos a variação considerando todos os dados históricos
@@ -163,9 +168,9 @@ const DashboardPage: React.FC = () => {
   // Calcula mudança percentual do resultado mensal (apenas quando há dados históricos)
   const percentChangeResultado = hasHistoricalData && resultadoMesAnterior !== 0 ? ((resultadoMes - resultadoMesAnterior) / Math.abs(resultadoMesAnterior)) * 100 : 0;
 
-  // Agrupa receitas/despesas por categoria
+  // Agrupa receitas/despesas por categoria (excluindo transferências)
   function groupByCategory(type: 'income' | 'expense') {
-    const txs = transactionsForCurrency.filter(tx => tx.type === type && tx.is_paid);
+    const txs = transactionsForCurrency.filter(tx => tx.type === type && tx.is_paid && !isTransferTransaction(tx));
     const map: { [catId: string]: { label: string; value: number; color: string } } = {};
     txs.forEach(tx => {
       const cat = categories.find(c => c.id === tx.category_id);
@@ -195,34 +200,12 @@ const DashboardPage: React.FC = () => {
       .reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount / 100 : -tx.amount / 100), 0);
   }
 
-  // Funções para calcular receitas e despesas por conta
-  function getAccountIncome(accountId: string) {
-    return transactionsForCurrency
-      .filter(tx => tx.account_id === accountId && tx.type === 'income' && tx.is_paid)
-      .reduce((sum, tx) => sum + tx.amount / 100, 0);
-  }
 
-  function getAccountExpenses(accountId: string) {
-    return transactionsForCurrency
-      .filter(tx => tx.account_id === accountId && tx.type === 'expense' && tx.is_paid)
-      .reduce((sum, tx) => sum + tx.amount / 100, 0);
-  }
-
-  function getAccountMonthlyBalance(accountId: string) {
-    const income = getAccountIncome(accountId);
-    const expenses = getAccountExpenses(accountId);
-    return income - expenses;
-  }
 
   // Saldos das contas (se disponível)
   const accountsForCurrency = accounts.filter(acc => acc.currency === selectedCurrency);
   const totalConfirmed = accountsForCurrency.reduce((sum, acc) => sum + getAccountConfirmedBalance(acc.id), 0);
   const totalProjected = accountsForCurrency.reduce((sum, acc) => sum + getAccountProjectedBalance(acc.id), 0);
-  
-  // Totais para o card de resultados de caixa
-  const totalAccountIncome = accountsForCurrency.reduce((sum, acc) => sum + getAccountIncome(acc.id), 0);
-  const totalAccountExpenses = accountsForCurrency.reduce((sum, acc) => sum + getAccountExpenses(acc.id), 0);
-  const totalAccountBalance = totalAccountIncome - totalAccountExpenses;
   
   const currencySymbols: Record<string, string> = { BRL: 'R$', EUR: '€', USD: 'US$', GBP: '£' };
 
@@ -234,6 +217,11 @@ const DashboardPage: React.FC = () => {
 
   const handleOpenIncomeModal = () => {
     setModalType('income');
+    setIsModalOpen(true);
+  };
+
+  const handleOpenTransferModal = () => {
+    setModalType('transfer');
     setIsModalOpen(true);
   };
 
@@ -330,7 +318,7 @@ const DashboardPage: React.FC = () => {
     try {
       const payload = toBackendPayload(data);
       await transactionService.createTransaction(payload);
-      const transactionTypeName = data.type === 'income' ? 'Receita' : 'Despesa';
+      const transactionTypeName = data.type === 'income' ? 'Receita' : data.type === 'expense' ? 'Despesa' : 'Transferência';
       showSuccess(`${transactionTypeName} criada com sucesso!`);
       setIsModalOpen(false);
       // Reload data to reflect changes
@@ -392,7 +380,7 @@ const DashboardPage: React.FC = () => {
               <span className="text-3xl text-green-600 mb-2">&#43;</span>
               <span className="text-gray-700 text-base font-medium">RECEITA</span>
             </button>
-            <button className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl px-6 py-0 shadow-sm hover:bg-gray-100 transition">
+            <button onClick={handleOpenTransferModal} className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl px-6 py-0 shadow-sm hover:bg-gray-100 transition">
               <span className="text-2xl text-gray-500 mb-2">
                 <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M7 12h10M16 9l3 3-3 3" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </span>
@@ -459,10 +447,9 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Cards Saldos e Resultados de Caixa lado a lado */}
-        <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 mt-6 flex flex-col lg:flex-row gap-6">
-          {/* Card Saldos de Caixa */}
-          <div className="flex-1 bg-white rounded-2xl shadow p-8 flex flex-col min-w-0">
+        {/* Card Saldos de Caixa */}
+        <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 mt-6">
+          <div className="bg-white rounded-2xl shadow p-8 flex flex-col min-w-0">
             <div className="text-xl font-bold text-gray-900 mb-6">Saldos de caixa</div>
             <div className="w-full overflow-x-auto">
               <div className="mb-2 ml-1 text-lg font-semibold text-gray-700">{selectedCurrency}</div>
@@ -497,65 +484,6 @@ const DashboardPage: React.FC = () => {
                     <td className="py-3 text-gray-900">Total</td>
                     <td className="py-3 text-green-600 font-bold text-right min-w-[100px]">{currencySymbols[selectedCurrency] || ''} {totalConfirmed.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                     <td className="py-3 text-green-600 font-bold text-right min-w-[100px]">{currencySymbols[selectedCurrency] || ''} {totalProjected.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          
-          {/* Card Resultados de Caixa */}
-          <div className="flex-1 bg-white rounded-2xl shadow p-8 flex flex-col min-w-0">
-            <div className="text-xl font-bold text-gray-900 mb-6">Resultados de caixa</div>
-            <div className="w-full overflow-x-auto">
-              <div className="mb-2 ml-1 text-lg font-semibold text-gray-700">{selectedCurrency}</div>
-              <table className="w-full text-left">
-                <thead>
-                  <tr>
-                    <th className="font-medium text-gray-700 pb-2"></th>
-                    <th className="font-semibold text-gray-500 pb-2 text-right min-w-[100px]">Receitas</th>
-                    <th className="font-semibold text-gray-500 pb-2 text-right min-w-[100px]">Despesas</th>
-                    <th className="font-semibold text-gray-500 pb-2 text-right min-w-[100px]">Saldo</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {accountsForCurrency.map((account) => {
-                    const income = getAccountIncome(account.id);
-                    const expenses = getAccountExpenses(account.id);
-                    const balance = income - expenses;
-                    
-                    return (
-                      <tr key={account.id}>
-                        <td className="py-3">
-                          <span className="inline-flex items-center gap-2">
-                            <span className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-base" style={{ background: account.color || '#22c55e' }}>
-                              {account.name.charAt(0).toUpperCase()}
-                            </span>
-                            <span className="text-gray-800 text-base">{account.name}</span>
-                          </span>
-                        </td>
-                        <td className="py-3 text-green-600 font-semibold text-base text-right min-w-[100px]">
-                          {income.toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency, minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-3 text-red-600 font-semibold text-base text-right min-w-[100px]">
-                          {expenses.toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency, minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
-                        <td className={`py-3 font-semibold text-base text-right min-w-[100px] ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {balance.toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency, minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  <tr className="font-bold border-t-2 border-gray-200">
-                    <td className="py-3 text-gray-900">Total</td>
-                    <td className="py-3 text-green-600 font-bold text-right min-w-[100px]">
-                      {totalAccountIncome.toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency, minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-3 text-red-600 font-bold text-right min-w-[100px]">
-                      {totalAccountExpenses.toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency, minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td className={`py-3 font-bold text-right min-w-[100px] ${totalAccountBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {totalAccountBalance.toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency, minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
                   </tr>
                 </tbody>
               </table>

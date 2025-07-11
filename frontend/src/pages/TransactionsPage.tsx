@@ -73,7 +73,31 @@ const TransactionsPage: React.FC = () => {
     account_id: t.account_id,
     category_id: t.category_id,
     initialIsPaid: t.is_paid,
+    transfer_id: t.transfer_id,
   });
+
+  // Função para detectar se uma transação é uma transferência
+  const isTransferTransaction = (transaction: Transaction): boolean => {
+    return transaction.transfer_id !== undefined && transaction.transfer_id !== null && transaction.transfer_id !== '';
+  };
+
+  // Função para obter o nome da categoria, tratando transferências
+  const getCategoryDisplayName = (transaction: Transaction): string => {
+    if (isTransferTransaction(transaction)) {
+      return 'Transferência';
+    }
+    const cat = categories.find(c => c.id === transaction.category_id);
+    return cat?.name || '-';
+  };
+
+  // Função para obter a cor da categoria, tratando transferências
+  const getCategoryColor = (transaction: Transaction): string => {
+    if (isTransferTransaction(transaction)) {
+      return '#6B7280'; // Cor cinza para transferências
+    }
+    const cat = categories.find(c => c.id === transaction.category_id);
+    return cat?.color || '#a7f3d0';
+  };
 
   const fetchData = async () => {
     try {
@@ -754,7 +778,6 @@ const TransactionsPage: React.FC = () => {
                 <tbody className="text-gray-900 text-base divide-y divide-gray-100">
                   {groupedByDate[dateKey].map(t => {
                     const acc = accounts.find(a => a.id === t.account_id);
-                    const cat = categories.find(c => c.id === t.category_id);
                     // Função para decidir cor do texto
                     return (
                       <tr key={t.id} className="hover:bg-gray-50 transition">
@@ -775,12 +798,12 @@ const TransactionsPage: React.FC = () => {
                               <span
                                 className={`text-xs font-semibold rounded-full px-3 py-1 border`}
                                 style={{
-                                  color: cat?.color || '#a7f3d0',
-                                  background: hexToRgba(cat?.color || '#a7f3d0', 0.10),
-                                  borderColor: hexToRgba(cat?.color || '#a7f3d0', 0.30),
+                                  color: getCategoryColor(t),
+                                  background: hexToRgba(getCategoryColor(t), 0.10),
+                                  borderColor: hexToRgba(getCategoryColor(t), 0.30),
                                 }}
                               >
-                                {cat?.name || '-'}
+                                {getCategoryDisplayName(t)}
                               </span>
                             </div>
                           </div>

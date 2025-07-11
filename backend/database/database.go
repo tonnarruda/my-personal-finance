@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 	"github.com/tonnarruda/my-personal-finance/structs"
 )
@@ -91,9 +92,16 @@ func (d *Database) Close() error {
 // CreateCategory insere uma nova categoria no banco
 func (d *Database) CreateCategory(category structs.Category) error {
 	query := `
-	INSERT INTO categories (id, name, description, type, color, icon, parent_id, is_active, created_at, updated_at, user_id)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	INSERT INTO categories (id, name, description, type, color, icon, parent_id, is_active, visible, created_at, updated_at, user_id)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
+
+	var userID interface{}
+	if category.UserID == "" {
+		userID = nil
+	} else {
+		userID = category.UserID
+	}
 
 	_, err := d.db.Exec(query,
 		category.ID,
@@ -104,9 +112,10 @@ func (d *Database) CreateCategory(category structs.Category) error {
 		category.Icon,
 		category.ParentID,
 		category.IsActive,
+		category.Visible,
 		category.CreatedAt,
 		category.UpdatedAt,
-		category.UserID,
+		userID,
 	)
 
 	return err
@@ -114,7 +123,7 @@ func (d *Database) CreateCategory(category structs.Category) error {
 
 // GetCategoryByID busca uma categoria pelo ID
 func (d *Database) GetCategoryByID(id string) (*structs.Category, error) {
-	query := `SELECT id, name, description, type, color, icon, parent_id, is_active, created_at, updated_at 
+	query := `SELECT id, name, description, type, color, icon, parent_id, is_active, visible, created_at, updated_at 
 			  FROM categories WHERE id = $1`
 
 	var category structs.Category
@@ -127,6 +136,7 @@ func (d *Database) GetCategoryByID(id string) (*structs.Category, error) {
 		&category.Icon,
 		&category.ParentID,
 		&category.IsActive,
+		&category.Visible,
 		&category.CreatedAt,
 		&category.UpdatedAt,
 	)
@@ -142,10 +152,9 @@ func (d *Database) GetCategoryByID(id string) (*structs.Category, error) {
 }
 
 // GetCategoryByName busca uma categoria pelo nome e tipo para um usuário específico
-// Primeiro busca categorias do usuário, depois categorias padrão (user_id IS NULL)
 func (d *Database) GetCategoryByName(name string, categoryType string, userID string) (*structs.Category, error) {
 	// Primeiro tenta buscar categoria do usuário específico
-	query := `SELECT id, name, description, type, color, icon, parent_id, is_active, created_at, updated_at, user_id 
+	query := `SELECT id, name, description, type, color, icon, parent_id, is_active, visible, created_at, updated_at, user_id 
 			  FROM categories WHERE name = $1 AND type = $2 AND user_id = $3 AND deleted_at IS NULL`
 
 	var category structs.Category
@@ -158,6 +167,7 @@ func (d *Database) GetCategoryByName(name string, categoryType string, userID st
 		&category.Icon,
 		&category.ParentID,
 		&category.IsActive,
+		&category.Visible,
 		&category.CreatedAt,
 		&category.UpdatedAt,
 		&category.UserID,
@@ -165,42 +175,18 @@ func (d *Database) GetCategoryByName(name string, categoryType string, userID st
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			// Se não encontrou categoria do usuário, busca categoria padrão
-			queryDefault := `SELECT id, name, description, type, color, icon, parent_id, is_active, created_at, updated_at, user_id 
-							FROM categories WHERE name = $1 AND type = $2 AND user_id IS NULL AND deleted_at IS NULL`
-
-			err = d.db.QueryRow(queryDefault, name, categoryType).Scan(
-				&category.ID,
-				&category.Name,
-				&category.Description,
-				&category.Type,
-				&category.Color,
-				&category.Icon,
-				&category.ParentID,
-				&category.IsActive,
-				&category.CreatedAt,
-				&category.UpdatedAt,
-				&category.UserID,
-			)
-
-			if err != nil {
-				if err == sql.ErrNoRows {
-					return nil, nil
-				}
-				return nil, err
-			}
-		} else {
-			return nil, err
+			return nil, nil
 		}
+		return nil, err
 	}
 
 	return &category, nil
 }
 
-// GetAllCategories busca todas as categorias do usuário (incluindo padrão)
+// GetAllCategories busca todas as categorias do usuário
 func (d *Database) GetAllCategories(userID string) ([]structs.Category, error) {
-	query := `SELECT id, name, description, type, color, icon, parent_id, is_active, created_at, updated_at, deleted_at, user_id 
-			  FROM categories WHERE deleted_at IS NULL AND (user_id = $1 OR user_id IS NULL) ORDER BY LOWER(name)`
+	query := `SELECT id, name, description, type, color, icon, parent_id, is_active, visible, created_at, updated_at, deleted_at, user_id 
+			  FROM categories WHERE deleted_at IS NULL AND user_id = $1 ORDER BY LOWER(name)`
 
 	rows, err := d.db.Query(query, userID)
 	if err != nil {
@@ -220,6 +206,7 @@ func (d *Database) GetAllCategories(userID string) ([]structs.Category, error) {
 			&category.Icon,
 			&category.ParentID,
 			&category.IsActive,
+			&category.Visible,
 			&category.CreatedAt,
 			&category.UpdatedAt,
 			&category.DeletedAt,
@@ -234,10 +221,10 @@ func (d *Database) GetAllCategories(userID string) ([]structs.Category, error) {
 	return categories, nil
 }
 
-// GetCategoriesByType busca categorias por tipo (receita ou despesa) do usuário (incluindo padrão)
+// GetCategoriesByType busca categorias por tipo (receita ou despesa) do usuário
 func (d *Database) GetCategoriesByType(userID string, categoryType structs.CategoryType) ([]structs.Category, error) {
-	query := `SELECT id, name, description, type, color, icon, parent_id, is_active, created_at, updated_at, deleted_at, user_id 
-			  FROM categories WHERE type = $1 AND deleted_at IS NULL AND (user_id = $2 OR user_id IS NULL) ORDER BY LOWER(name)`
+	query := `SELECT id, name, description, type, color, icon, parent_id, is_active, visible, created_at, updated_at, deleted_at, user_id 
+			  FROM categories WHERE type = $1 AND deleted_at IS NULL AND user_id = $2 ORDER BY LOWER(name)`
 
 	rows, err := d.db.Query(query, categoryType, userID)
 	if err != nil {
@@ -257,6 +244,7 @@ func (d *Database) GetCategoriesByType(userID string, categoryType structs.Categ
 			&category.Icon,
 			&category.ParentID,
 			&category.IsActive,
+			&category.Visible,
 			&category.CreatedAt,
 			&category.UpdatedAt,
 			&category.DeletedAt,
@@ -271,10 +259,10 @@ func (d *Database) GetCategoriesByType(userID string, categoryType structs.Categ
 	return categories, nil
 }
 
-// GetSubcategories busca as subcategorias de uma categoria pai do usuário (incluindo padrão)
+// GetSubcategories busca as subcategorias de uma categoria pai do usuário
 func (d *Database) GetSubcategories(parentID string, userID string) ([]structs.Category, error) {
-	query := `SELECT id, name, description, type, color, icon, parent_id, is_active, created_at, updated_at, deleted_at, user_id 
-			  FROM categories WHERE parent_id = $1 AND deleted_at IS NULL AND (user_id = $2 OR user_id IS NULL) ORDER BY LOWER(name)`
+	query := `SELECT id, name, description, type, color, icon, parent_id, is_active, visible, created_at, updated_at, deleted_at, user_id 
+			  FROM categories WHERE parent_id = $1 AND deleted_at IS NULL AND user_id = $2 ORDER BY LOWER(name)`
 
 	rows, err := d.db.Query(query, parentID, userID)
 	if err != nil {
@@ -294,6 +282,7 @@ func (d *Database) GetSubcategories(parentID string, userID string) ([]structs.C
 			&category.Icon,
 			&category.ParentID,
 			&category.IsActive,
+			&category.Visible,
 			&category.CreatedAt,
 			&category.UpdatedAt,
 			&category.DeletedAt,
@@ -310,7 +299,7 @@ func (d *Database) GetSubcategories(parentID string, userID string) ([]structs.C
 
 // GetSubcategoriesIncludingDeleted busca as subcategorias de uma categoria pai incluindo as deletadas
 func (d *Database) GetSubcategoriesIncludingDeleted(parentID string) ([]structs.Category, error) {
-	query := `SELECT id, name, description, type, color, icon, parent_id, is_active, created_at, updated_at, deleted_at 
+	query := `SELECT id, name, description, type, color, icon, parent_id, is_active, visible, created_at, updated_at, deleted_at 
 			  FROM categories WHERE parent_id = $1 ORDER BY LOWER(name)`
 
 	rows, err := d.db.Query(query, parentID)
@@ -331,6 +320,7 @@ func (d *Database) GetSubcategoriesIncludingDeleted(parentID string) ([]structs.
 			&category.Icon,
 			&category.ParentID,
 			&category.IsActive,
+			&category.Visible,
 			&category.CreatedAt,
 			&category.UpdatedAt,
 			&category.DeletedAt,
@@ -348,13 +338,18 @@ func (d *Database) GetSubcategoriesIncludingDeleted(parentID string) ([]structs.
 func (d *Database) UpdateCategory(id string, req structs.UpdateCategoryRequest) error {
 	query := `
 	UPDATE categories 
-	SET name = $1, description = $2, color = $3, icon = $4, is_active = $5, updated_at = $6
-	WHERE id = $7 AND user_id = $8
+	SET name = $1, description = $2, color = $3, icon = $4, is_active = $5, visible = $6, updated_at = $7
+	WHERE id = $8 AND user_id = $9
 	`
 
 	isActive := true
 	if req.IsActive != nil {
 		isActive = *req.IsActive
+	}
+
+	visible := true
+	if req.Visible != nil {
+		visible = *req.Visible
 	}
 
 	_, err := d.db.Exec(query,
@@ -363,6 +358,7 @@ func (d *Database) UpdateCategory(id string, req structs.UpdateCategoryRequest) 
 		req.Color,
 		req.Icon,
 		isActive,
+		visible,
 		time.Now(),
 		id,
 		req.UserID,
@@ -383,6 +379,100 @@ func (d *Database) HardDeleteCategory(id string) error {
 	query := `DELETE FROM categories WHERE id = $1`
 	_, err := d.db.Exec(query, id)
 	return err
+}
+
+// GetTransferCategory busca a categoria de transferência (categoria de sistema)
+func (d *Database) GetTransferCategory() (*structs.Category, error) {
+	// Primeiro tenta buscar pelo nome exato
+	query := `SELECT id, name, description, type, color, icon, parent_id, is_active, visible, created_at, updated_at, COALESCE(user_id, '') as user_id 
+			  FROM categories WHERE type = 'transfer' AND name = 'Transferência' AND deleted_at IS NULL LIMIT 1`
+
+	var category structs.Category
+	err := d.db.QueryRow(query).Scan(
+		&category.ID,
+		&category.Name,
+		&category.Description,
+		&category.Type,
+		&category.Color,
+		&category.Icon,
+		&category.ParentID,
+		&category.IsActive,
+		&category.Visible,
+		&category.CreatedAt,
+		&category.UpdatedAt,
+		&category.UserID,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Se não encontrar, tenta buscar apenas por tipo
+			query = `SELECT id, name, description, type, color, icon, parent_id, is_active, visible, created_at, updated_at, COALESCE(user_id, '') as user_id 
+					 FROM categories WHERE type = 'transfer' AND deleted_at IS NULL LIMIT 1`
+
+			err = d.db.QueryRow(query).Scan(
+				&category.ID,
+				&category.Name,
+				&category.Description,
+				&category.Type,
+				&category.Color,
+				&category.Icon,
+				&category.ParentID,
+				&category.IsActive,
+				&category.Visible,
+				&category.CreatedAt,
+				&category.UpdatedAt,
+				&category.UserID,
+			)
+
+			if err != nil {
+				if err == sql.ErrNoRows {
+					return nil, nil
+				}
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	return &category, nil
+}
+
+// EnsureTransferCategory garante que a categoria de transferência existe
+func (d *Database) EnsureTransferCategory() (*structs.Category, error) {
+	// Primeiro tenta buscar
+	category, err := d.GetTransferCategory()
+	if err != nil {
+		return nil, err
+	}
+
+	// Se não encontrou, cria a categoria
+	if category == nil {
+		newCategory := structs.Category{
+			ID:          uuid.New().String(),
+			Name:        "Transferência",
+			Description: "Categoria para transferências entre contas",
+			Type:        "transfer",
+			Color:       "#6B7280",
+			Icon:        "transfer",
+			ParentID:    nil,
+			IsActive:    true,
+			Visible:     false,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+			UserID:      "", // NULL para categoria de sistema
+		}
+
+		// Criar a categoria
+		err = d.CreateCategory(newCategory)
+		if err != nil {
+			return nil, err
+		}
+
+		return &newCategory, nil
+	}
+
+	return category, nil
 }
 
 func (d *Database) GetDB() *sql.DB {
