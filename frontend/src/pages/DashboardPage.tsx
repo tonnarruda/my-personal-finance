@@ -76,7 +76,7 @@ const DashboardPage: React.FC = () => {
           categoryService.getCategoriesByType('income'),
           categoryService.getCategoriesByType('expense'),
         ]);
-        setAccounts((accountsData || []).filter(acc => acc.is_active));
+        setAccounts(accountsData || []);
         setTransactions(transactionsData || []);
         setCategories([...(categoriesIncome || []), ...(categoriesExpense || [])]);
       } catch (err) {
