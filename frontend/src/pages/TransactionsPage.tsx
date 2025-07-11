@@ -119,21 +119,6 @@ const TransactionsPage: React.FC = () => {
     if (dueDate) {
       const dueDateString = dueDate.toISOString().split('T')[0]; // Formato YYYY-MM-DD
       
-      // Debug temporário para produção
-      if (transaction.description === 'SSSS') {
-        console.log('DEBUG PROD - Transação SSSS:', {
-          description: transaction.description,
-          due_date: transaction.due_date,
-          dueDate: dueDate,
-          dueDateString: dueDateString,
-          today: today,
-          todayString: todayString,
-          isEqual: dueDateString === todayString,
-          isLess: dueDateString < todayString,
-          is_paid: transaction.is_paid
-        });
-      }
-      
       if (dueDateString < todayString) {
         return {
           text: 'Vencida',
