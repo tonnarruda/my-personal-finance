@@ -158,10 +158,14 @@ func (s *CategoryService) UpdateCategory(id string, req structs.UpdateCategoryRe
 		return nil, fmt.Errorf("erro ao atualizar categoria: %w", err)
 	}
 
-	// Se a categoria não tem parent_id (é uma categoria pai) e a cor foi alterada,
-	// atualizar a cor de todas as subcategorias
-	if existingCategory.ParentID == nil && req.Color != "" && req.Color != existingCategory.Color {
-		subcategories, err := s.db.GetSubcategories(id, req.UserID)
+	// Se a cor foi alterada, atualizar a cor de todas as subcategorias (parent_id = id)
+	if req.Color != "" && req.Color != existingCategory.Color {
+		// Buscar userID da categoria se não vier no request
+		userID := req.UserID
+		if userID == "" {
+			userID = existingCategory.UserID
+		}
+		subcategories, err := s.db.GetSubcategories(id, userID)
 		if err != nil {
 			return nil, fmt.Errorf("erro ao buscar subcategorias: %w", err)
 		}
@@ -171,10 +175,11 @@ func (s *CategoryService) UpdateCategory(id string, req structs.UpdateCategoryRe
 			updateReq := structs.UpdateCategoryRequest{
 				Name:        subcategory.Name,
 				Description: subcategory.Description,
-				Color:       req.Color, // Usar a nova cor da categoria pai
+				Color:       req.Color, // Usar a nova cor
 				Icon:        subcategory.Icon,
 				IsActive:    &subcategory.IsActive,
 				Visible:     &subcategory.Visible,
+				UserID:      subcategory.UserID,
 			}
 
 			if err := s.db.UpdateCategory(subcategory.ID, updateReq); err != nil {
