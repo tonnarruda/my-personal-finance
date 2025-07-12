@@ -51,6 +51,12 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    if (error.response && error.response.status === 401) {
+      // Limpa o estado do usuário (logout)
+      localStorage.removeItem('user');
+      // Redireciona para login
+      window.location.href = '/login';
+    }
     console.error('API Error:', error.response?.status, error.response?.data);
     return Promise.reject(error);
   }

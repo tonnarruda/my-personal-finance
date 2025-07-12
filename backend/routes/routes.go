@@ -24,7 +24,7 @@ func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *hand
 	}))
 
 	// Grupo de rotas para categorias
-	categories := router.Group("/api/categories")
+	categories := router.Group("/api/categories", handlers.SessionAuthMiddleware())
 	{
 		// Rota OPTIONS para CORS preflight
 		categories.OPTIONS("", func(c *gin.Context) {
@@ -47,7 +47,7 @@ func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *hand
 	}
 
 	// Grupo de rotas para contas
-	accounts := router.Group("/api/accounts")
+	accounts := router.Group("/api/accounts", handlers.SessionAuthMiddleware())
 	{
 		// Rota OPTIONS para CORS preflight
 		accounts.OPTIONS("", func(c *gin.Context) {
@@ -66,7 +66,7 @@ func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *hand
 	}
 
 	// Grupo de rotas para transações
-	transactions := router.Group("/api/transactions")
+	transactions := router.Group("/api/transactions", handlers.SessionAuthMiddleware())
 	{
 		transactions.OPTIONS("", func(c *gin.Context) { c.Status(204) })
 		transactions.OPTIONS(":id", func(c *gin.Context) { c.Status(204) })
@@ -84,7 +84,8 @@ func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *hand
 	router.OPTIONS("/api/me", func(c *gin.Context) { c.Status(204) })
 	router.POST("/api/signup", authHandler.SignupHandler)
 	router.POST("/api/login", authHandler.LoginHandler)
-	router.GET("/api/me", authHandler.GetMeHandler)
+	// Proteger rota /api/me
+	router.GET("/api/me", handlers.SessionAuthMiddleware(), authHandler.GetMeHandler)
 
 	// Rota de health check
 	router.GET("/health", func(c *gin.Context) {
