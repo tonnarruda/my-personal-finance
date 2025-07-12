@@ -65,15 +65,15 @@ func SessionAuthMiddleware() gin.HandlerFunc {
 			"exp":     time.Now().Add(sessionDuration).Unix(),
 		})
 		newTokenString, _ := newToken.SignedString([]byte(jwtSecret))
-		c.SetCookie(
-			sessionCookieName,
-			newTokenString,
-			int(sessionDuration.Seconds()),
-			"/",
-			"",
-			true, // Secure
-			true, // HttpOnly
-		)
+		http.SetCookie(c.Writer, &http.Cookie{
+			Name:     sessionCookieName,
+			Value:    newTokenString,
+			Path:     "/",
+			MaxAge:   int(sessionDuration.Seconds()),
+			Secure:   true,
+			HttpOnly: true,
+			SameSite: http.SameSiteNoneMode,
+		})
 		c.Set("user_id", userID)
 		c.Next()
 	}
@@ -148,16 +148,15 @@ func (h *AuthHandler) LoginHandler(c *gin.Context) {
 		return
 	}
 
-	// Define cookie seguro
-	c.SetCookie(
-		sessionCookieName,
-		tokenString,
-		int(sessionDuration.Seconds()),
-		"/",
-		"",
-		true, // Secure
-		true, // HttpOnly
-	)
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    tokenString,
+		Path:     "/",
+		MaxAge:   int(sessionDuration.Seconds()),
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteNoneMode,
+	})
 
 	c.JSON(http.StatusOK, gin.H{
 		"id":    user.ID,
