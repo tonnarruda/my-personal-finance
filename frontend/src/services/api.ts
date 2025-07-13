@@ -249,8 +249,19 @@ export const transactionService = {
 
 // Função para login
 export async function login(email: string, senha: string) {
-  const response = await api.post('/login', { email, senha });
-  return response.data;
+  console.log('[LOGIN-API] Iniciando login para:', email);
+  console.log('[LOGIN-API] URL da API:', API_BASE_URL);
+  
+  try {
+    const response = await api.post('/login', { email, senha });
+    console.log('[LOGIN-API] Resposta recebida:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('[LOGIN-API] Erro na requisição:', error);
+    console.error('[LOGIN-API] Status:', error.response?.status);
+    console.error('[LOGIN-API] Data:', error.response?.data);
+    throw error;
+  }
 }
 
 // Função para signup

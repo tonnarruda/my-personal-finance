@@ -21,12 +21,23 @@ const LoginPage: React.FC = () => {
       showError('Preencha todos os campos.');
       return;
     }
+    
+    console.log('[LOGIN] Tentando fazer login com:', { email });
     setLoading(true);
+    
     try {
+      console.log('[LOGIN] Chamando API de login...');
       const user = await login(email, senha);
+      console.log('[LOGIN] Resposta da API:', user);
+      
+      console.log('[LOGIN] Salvando usuário no localStorage...');
       setUser(user);
+      
+      console.log('[LOGIN] Redirecionando para dashboard...');
       navigate('/dashboard');
     } catch (err: any) {
+      console.error('[LOGIN] Erro no login:', err);
+      console.error('[LOGIN] Detalhes do erro:', err?.response?.data);
       showError(err?.response?.data?.erro || 'Erro ao fazer login.');
     } finally {
       setLoading(false);
