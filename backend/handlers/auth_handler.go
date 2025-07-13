@@ -33,18 +33,29 @@ func SessionAuthMiddleware() gin.HandlerFunc {
 		fmt.Printf("[AUTH] Verificando autenticação para: %s | User-Agent: %s\n",
 			c.Request.URL.Path, c.GetHeader("User-Agent"))
 
-		cookie, err := c.Cookie(sessionCookieName)
-		if err != nil {
-			fmt.Printf("[AUTH] ❌ Cookie não encontrado: %v\n", err)
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Sessão expirada ou inválida"})
-			return
-		}
+		var tokenString string
 
-		fmt.Printf("[AUTH] ✅ Cookie encontrado, validando JWT...\n")
+		// Primeiro tenta pegar do cookie
+		cookie, err := c.Cookie(sessionCookieName)
+		if err == nil {
+			tokenString = cookie
+			fmt.Printf("[AUTH] ✅ Token encontrado no cookie\n")
+		} else {
+			// Se não encontrar no cookie, tenta pegar do header Authorization
+			authHeader := c.GetHeader("Authorization")
+			if authHeader != "" && len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+				tokenString = authHeader[7:]
+				fmt.Printf("[AUTH] ✅ Token encontrado no header Authorization\n")
+			} else {
+				fmt.Printf("[AUTH] ❌ Token não encontrado nem no cookie nem no header\n")
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Sessão expirada ou inválida"})
+				return
+			}
+		}
 
 		// Validar e decodificar JWT
 		claims := jwt.MapClaims{}
-		token, err := jwt.ParseWithClaims(cookie, claims, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(jwtSecret), nil
 		})
 		if err != nil || !token.Valid {
@@ -190,6 +201,7 @@ func (h *AuthHandler) LoginHandler(c *gin.Context) {
 		"id":    user.ID,
 		"nome":  user.Nome,
 		"email": user.Email,
+		"token": tokenString, // Adicionando o token no response
 	})
 }
 

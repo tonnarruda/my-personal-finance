@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getUser } from './auth';
+import { getUser, getAuthToken, clearAuth } from './auth';
 import { 
   Category, 
   CategoryWithSubcategories, 
@@ -41,11 +41,19 @@ api.interceptors.request.use(
   (config) => {
     // Verifica se o usuário está autenticado para rotas protegidas
     const user = getUser();
+    const token = getAuthToken();
+    
     if (!user && !config.url?.includes('/login') && !config.url?.includes('/signup')) {
       console.log('Usuário não autenticado, redirecionando para login');
       window.location.href = '/login';
       return Promise.reject(new Error('Usuário não autenticado'));
     }
+    
+    // Adiciona o token no header Authorization se existir
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
     return config;
   },
   (error) => {
@@ -60,7 +68,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       // Limpa o estado do usuário (logout)
-      localStorage.removeItem('user');
+      clearAuth();
       // Redireciona para login
       window.location.href = '/login';
     }
@@ -247,7 +255,7 @@ export async function logout() {
     console.error('Erro ao fazer logout:', error);
   } finally {
     // Sempre limpa o localStorage e redireciona
-    localStorage.removeItem('user');
+    clearAuth();
     window.location.href = '/login';
   }
 }
