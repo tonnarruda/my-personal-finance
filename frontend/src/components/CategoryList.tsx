@@ -34,10 +34,10 @@ const CategoryList: React.FC<CategoryListProps> = ({
 
   const CategoryItem: React.FC<{ category: Category; isSubcategory?: boolean }> = ({ category, isSubcategory = false }) => (
     <div
-      className={`flex items-center bg-white border border-gray-100 rounded-xl shadow-sm mb-3 transition
+      className={`flex items-center bg-white border border-gray-100 rounded-xl shadow-sm transition
         ${isSubcategory
-          ? 'ml-10 bg-gray-50 py-2 px-4 min-h-[36px]'
-          : 'py-4 px-6 min-h-[56px]'}
+          ? 'ml-20 bg-gray-50 py-2.5 px-4 min-h-[44px] mb-4'
+          : 'py-4 px-6 min-h-[56px] mb-6'}
         ${!category.is_active ? 'opacity-50 cursor-default pointer-events-auto' : ''}`}
     >
       <span
@@ -87,12 +87,12 @@ const CategoryList: React.FC<CategoryListProps> = ({
   );
 
   return (
-    <div>
+    <div className="space-y-6">
       {categories.map((categoryWithSubs) => (
         <div key={categoryWithSubs.id}>
           <CategoryItem category={categoryWithSubs} />
           {categoryWithSubs.subcategories && categoryWithSubs.subcategories.length > 0 && (
-            <div>
+            <div className="mt-4">
               {categoryWithSubs.subcategories.map((subcategory) => (
                 <CategoryItem key={subcategory.id} category={subcategory} isSubcategory />
               ))}

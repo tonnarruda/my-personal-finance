@@ -12,6 +12,7 @@ const CategoriesPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  const [parentCategory, setParentCategory] = useState<Category | null>(null);
   const { showSuccess, showError } = useToast();
 
   const fetchCategories = useCallback(async () => {
@@ -31,11 +32,19 @@ const CategoriesPage: React.FC = () => {
 
   const handleOpenForm = (category: Category | null = null) => {
     setEditingCategory(category);
+    setParentCategory(null);
+    setShowForm(true);
+  };
+
+  const handleAddSubcategory = (parent: Category) => {
+    setParentCategory(parent);
+    setEditingCategory(null);
     setShowForm(true);
   };
 
   const handleCloseForm = () => {
     setEditingCategory(null);
+    setParentCategory(null);
     setShowForm(false);
   };
 
@@ -46,7 +55,7 @@ const CategoriesPage: React.FC = () => {
         showSuccess('Categoria atualizada com sucesso!');
       } else {
         await categoryService.createCategory(data);
-        showSuccess('Categoria criada com sucesso!');
+        showSuccess(parentCategory ? 'Subcategoria criada com sucesso!' : 'Categoria criada com sucesso!');
       }
       handleCloseForm();
       fetchCategories();
@@ -86,11 +95,34 @@ const CategoriesPage: React.FC = () => {
           <span className="font-semibold">{category.name}</span>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => handleOpenForm(category)} className="p-1 text-blue-600 hover:bg-blue-50 rounded">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
+          {!isSubcategory && (
+            <button
+              onClick={() => handleAddSubcategory(category)}
+              className="p-1 text-green-600 hover:bg-green-50 rounded"
+              title="Adicionar subcategoria"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          )}
+          <button
+            onClick={() => handleOpenForm(category)}
+            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+            title="Editar categoria"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" />
+            </svg>
           </button>
-          <button onClick={() => handleDelete(category)} className="p-1 text-red-600 hover:bg-red-50 rounded">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m-7-7h10" /></svg>
+          <button
+            onClick={() => handleDelete(category)}
+            className="p-1 text-red-600 hover:bg-red-50 rounded"
+            title="Excluir categoria"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m-7-7h10" />
+            </svg>
           </button>
         </div>
       </div>
@@ -142,9 +174,16 @@ const CategoriesPage: React.FC = () => {
           <div className={`fixed inset-0 bg-black bg-opacity-30 z-50 flex items-center justify-center p-4 ${!isCollapsed ? 'lg:pl-64' : 'lg:pl-20'}`}>
             <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-lg relative">
               <button onClick={handleCloseForm} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
-              <CategoryForm category={editingCategory || undefined} onSubmit={handleSubmit} onCancel={handleCloseForm} />
+              <CategoryForm
+                category={editingCategory || undefined}
+                parentCategory={parentCategory || undefined}
+                onSubmit={handleSubmit}
+                onCancel={handleCloseForm}
+              />
             </div>
           </div>
         )}
