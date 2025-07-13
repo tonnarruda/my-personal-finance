@@ -744,15 +744,12 @@ const TransactionsPage: React.FC = () => {
     <Layout>
       {/* Bloco fixo no topo, alinhado ao conteúdo principal */}
       <div
-        className={[
-          'fixed top-0 bg-white shadow z-50 px-4 sm:px-6 lg:px-8 pt-8 pb-4 flex flex-col transition-all duration-300',
-          'w-screen left-0',
-          isCollapsed
-            ? 'lg:left-20 lg:w-[calc(100vw-5rem)]'
-            : 'lg:left-64 lg:w-[calc(100vw-16rem)]',
-          'xl:left-64 xl:w-[calc(100vw-16rem)]'
-        ].join(' ')}
-        style={{ minHeight: 200 }}
+        className={`fixed top-0 bg-white shadow z-50 px-4 sm:px-6 lg:px-8 pt-8 pb-4 flex flex-col transition-all duration-300 ${
+          isCollapsed 
+            ? 'left-20 w-[calc(100vw-5rem)]' 
+            : 'left-64 w-[calc(100vw-16rem)]'
+        }`}
+        style={{ minHeight: 110 }}
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
