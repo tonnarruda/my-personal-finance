@@ -182,7 +182,14 @@ export const accountService = {
   // Atualizar conta
   updateAccount: async (id: string, data: UpdateAccountRequestType): Promise<string> => {
     const userId = getUserId();
-    const response = await api.put<AccountApiResponse>(`/accounts/${id}?user_id=${userId}`, data);
+    const payload = {
+      ...data,
+      user_id: userId,
+      due_date: data.due_date,
+      competence_date: data.competence_date,
+      initial_value: data.initial_value
+    };
+    const response = await api.put<AccountApiResponse>(`/accounts/${id}?user_id=${userId}`, payload);
     return response.data.message || 'Conta atualizada com sucesso';
   },
 

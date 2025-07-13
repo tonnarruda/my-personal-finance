@@ -19,7 +19,16 @@ export interface AccountFormData {
 
 interface AccountFormProps {
   account?: Account;
-  onSubmit: (data: AccountFormData) => void;
+  onSubmit: (data: {
+    name: string;
+    type: 'income' | 'expense';
+    currency: string;
+    color: string;
+    is_active: boolean;
+    due_date: string;
+    competence_date: string;
+    initial_value: number;
+  }) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -64,7 +73,7 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onCancel, 
     accountType: 'income',
     currency: 'BRL',
     name: '',
-    initialDate: '',
+    initialDate: '', // Não definir data padrão, deixar o DateInput controlar
     initialValue: 0,
     initialBalanceType: 'credit',
     color: PREDEFINED_COLORS[0],
@@ -112,7 +121,7 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onCancel, 
           accountType: 'income',
           currency: 'BRL',
           name: '',
-          initialDate: '',
+          initialDate: new Date().toISOString().split('T')[0], // Definir data atual como padrão
           initialValue: 0,
           initialBalanceType: 'credit',
           color: PREDEFINED_COLORS[0],
@@ -139,7 +148,17 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onCancel, 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit(formData);
+      const submitData = {
+        name: formData.name.trim(),
+        type: formData.accountType,
+        currency: formData.currency,
+        color: formData.color,
+        is_active: formData.is_active,
+        due_date: formData.initialDate,
+        competence_date: formData.initialDate,
+        initial_value: formData.initialValue
+      };
+      onSubmit(submitData);
     }
   };
 

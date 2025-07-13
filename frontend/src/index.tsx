@@ -2,22 +2,27 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
-import { SidebarProvider } from './contexts/SidebarContext';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
+import { ToastProvider } from './contexts/ToastContext';
+import { SidebarProvider } from './contexts/SidebarContext';
+import { DateInputProvider } from './contexts/DateInputContext';
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
-
 root.render(
   <React.StrictMode>
-    <SidebarProvider>
-      <App />
-    </SidebarProvider>
+    <ToastProvider>
+      <SidebarProvider>
+        <DateInputProvider>
+          <App />
+        </DateInputProvider>
+      </SidebarProvider>
+    </ToastProvider>
   </React.StrictMode>
 );
 
 // If you want your app to work offline and load faster, you can change
 // unregister() to register() below. Note this comes with some pitfalls.
 // Learn more about service workers: https://cra.link/PWA
-serviceWorkerRegistration.register(); 
+serviceWorkerRegistration.unregister(); 

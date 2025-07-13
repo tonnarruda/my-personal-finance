@@ -1,14 +1,15 @@
 export interface Account {
   id: string;
-  currency: string;
   name: string;
+  currency: string;
   color: string;
+  balance: number;
   type: string; // income ou expense
+  user_id: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
   deleted_at?: string;
-  user_id: string;
 }
 
 export interface CreateAccountRequest {
@@ -19,7 +20,7 @@ export interface CreateAccountRequest {
   is_active?: boolean;
   due_date?: string;
   competence_date?: string;
-  initial_value?: number; // Valor inicial da conta em reais
+  initial_value?: number;
 }
 
 export interface UpdateAccountRequest {
@@ -29,6 +30,9 @@ export interface UpdateAccountRequest {
   type?: string; // income ou expense
   is_active?: boolean;
   user_id?: string;
+  due_date?: string;
+  competence_date?: string;
+  initial_value?: number;
 }
 
 export interface ApiResponse<T = any> {

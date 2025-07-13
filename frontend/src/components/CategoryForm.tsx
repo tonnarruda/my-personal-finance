@@ -80,7 +80,16 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit(formData);
+      const submitData = {
+        name: formData.name,
+        description: formData.description || '',
+        type: formData.type,
+        color: formData.color,
+        icon: formData.icon,
+        parent_id: formData.parent_id,
+        is_active: formData.is_active
+      };
+      onSubmit(submitData);
     }
   };
 

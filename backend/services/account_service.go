@@ -55,8 +55,19 @@ func (s *AccountService) CreateAccount(req structs.CreateAccountRequest) (*struc
 		return nil, fmt.Errorf("erro ao criar conta: %w", err)
 	}
 
-	// Criar transação inicial baseada no tipo da conta usando as datas enviadas pelo usuário
-	if err := s.createInitialTransaction(account, req.Type, req.DueDate, req.CompetenceDate, req.InitialValue); err != nil {
+	// Converter as strings de data para time.Time
+	dueDate, err := time.Parse("2006-01-02", req.DueDate)
+	if err != nil {
+		return nil, fmt.Errorf("data de vencimento inválida: %w", err)
+	}
+
+	competenceDate, err := time.Parse("2006-01-02", req.CompetenceDate)
+	if err != nil {
+		return nil, fmt.Errorf("data de competência inválida: %w", err)
+	}
+
+	// Criar transação inicial baseada no tipo da conta usando as datas convertidas
+	if err := s.createInitialTransaction(account, req.Type, dueDate, competenceDate, req.InitialValue); err != nil {
 		// Log do erro mas não falha a criação da conta
 		fmt.Printf("Erro ao criar transação inicial para conta %s: %v\n", account.ID, err)
 	}
@@ -193,6 +204,43 @@ func (s *AccountService) UpdateAccount(id string, req structs.UpdateAccountReque
 	// Atualizar a conta
 	if err := s.db.UpdateAccount(id, req); err != nil {
 		return nil, fmt.Errorf("erro ao atualizar conta: %w", err)
+	}
+
+	// Se temos dados de transação inicial, atualizar ou criar
+	if req.DueDate != "" && req.CompetenceDate != "" {
+		// Buscar transação inicial existente
+		initialTransaction, err := s.db.GetInitialTransaction(id, req.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("erro ao buscar transação inicial: %w", err)
+		}
+
+		// Converter as strings de data para time.Time
+		dueDate, err := time.Parse("2006-01-02", req.DueDate)
+		if err != nil {
+			return nil, fmt.Errorf("data de vencimento inválida: %w", err)
+		}
+
+		competenceDate, err := time.Parse("2006-01-02", req.CompetenceDate)
+		if err != nil {
+			return nil, fmt.Errorf("data de competência inválida: %w", err)
+		}
+
+		if initialTransaction != nil {
+			// Atualizar transação existente
+			initialTransaction.DueDate = dueDate
+			initialTransaction.CompetenceDate = competenceDate
+			initialTransaction.Amount = int(req.InitialValue * 100)
+			initialTransaction.UpdatedAt = time.Now()
+
+			if err := s.db.UpdateTransaction(initialTransaction.ID, req.UserID, *initialTransaction); err != nil {
+				return nil, fmt.Errorf("erro ao atualizar transação inicial: %w", err)
+			}
+		} else {
+			// Criar nova transação inicial
+			if err := s.createInitialTransaction(*existingAccount, req.Type, dueDate, competenceDate, req.InitialValue); err != nil {
+				return nil, fmt.Errorf("erro ao criar transação inicial: %w", err)
+			}
+		}
 	}
 
 	// Buscar a conta atualizada

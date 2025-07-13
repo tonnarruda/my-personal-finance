@@ -1,262 +1,169 @@
-import React, { useState, useEffect } from 'react';
-import { Category, CreateCategoryRequest, UpdateCategoryRequest } from '../types/category';
-import { categoryService } from '../services/api';
-import CategoryList from '../components/CategoryList';
-import CategoryForm from '../components/CategoryForm';
+import React, { useEffect, useState, useCallback } from 'react';
 import Layout from '../components/Layout';
+import CategoryForm from '../components/CategoryForm';
+import { categoryService } from '../services/api';
+import { Category } from '../types/category';
 import { useToast } from '../contexts/ToastContext';
 import { useSidebar } from '../contexts/SidebarContext';
 
 const CategoriesPage: React.FC = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | undefined>();
-  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
-  const [parentCategory, setParentCategory] = useState<Category | undefined>();
-  const [showInactive, setShowInactive] = useState(false);
-  const { showSuccess, showError } = useToast();
   const { isCollapsed } = useSidebar();
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  const { showSuccess, showError } = useToast();
 
-  useEffect(() => {
-    loadCategories();
-  }, []);
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
-
-  // ESC para fechar o modal
-  useEffect(() => {
-    if (!(showForm || editingCategory)) return;
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleCancelForm();
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [showForm, editingCategory]);
-
-  useEffect(() => {
-    if (!categoryToDelete) return;
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') cancelDeleteCategory();
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [categoryToDelete]);
-
-  const loadCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
-      setIsLoading(true);
-      const allCats = await categoryService.getAllCategories();
-      setCategories(allCats);
+      const incomeCategories = await categoryService.getCategoriesWithSubcategories('income');
+      const expenseCategories = await categoryService.getCategoriesWithSubcategories('expense');
+      setCategories([...incomeCategories, ...expenseCategories]);
     } catch (err) {
-      showError('Erro ao carregar categorias. Verifique se o backend está rodando.');
-      console.error('Erro ao carregar categorias:', err);
-    } finally {
-      setIsLoading(false);
+      setCategories([]);
+      showError('Erro ao buscar categorias.');
     }
-  };
+  }, [showError]);
 
-  const handleCreateCategory = async (data: CreateCategoryRequest) => {
-    try {
-      const message = await categoryService.createCategory(data);
-      showSuccess(message);
-      setShowForm(false);
-      setEditingCategory(undefined);
-      await loadCategories();
-    } catch (err: any) {
-      showError(err.response?.data?.error || 'Erro ao criar categoria');
-      console.error('Erro ao criar categoria:', err);
-    }
-  };
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
-  const handleUpdateCategory = async (data: UpdateCategoryRequest) => {
-    if (!editingCategory) return;
-    try {
-      const message = await categoryService.updateCategory(editingCategory.id, data);
-      showSuccess(message);
-      setShowForm(false);
-      setEditingCategory(undefined);
-      await loadCategories();
-    } catch (err: any) {
-      showError(err.response?.data?.error || 'Erro ao atualizar categoria');
-      console.error('Erro ao atualizar categoria:', err);
-    }
-  };
-
-  const handleDeleteCategory = async (category: Category) => {
-    setCategoryToDelete(category);
-  };
-
-  const confirmDeleteCategory = async () => {
-    if (!categoryToDelete) return;
-    try {
-      setCategoryToDelete(null);
-      const message = await categoryService.deleteCategory(categoryToDelete.id);
-      showSuccess(message);
-      await loadCategories();
-    } catch (err: any) {
-      showError(err.response?.data?.error || 'Erro ao excluir categoria');
-      console.error('Erro ao excluir categoria:', err);
-    }
-  };
-
-  const cancelDeleteCategory = () => {
-    setCategoryToDelete(null);
-  };
-
-  const handleEditCategory = (category: Category) => {
+  const handleOpenForm = (category: Category | null = null) => {
     setEditingCategory(category);
     setShowForm(true);
   };
 
-  const handleAddSubcategory = (parentCategory: Category) => {
-    setEditingCategory(undefined);
-    setParentCategory(parentCategory);
-    setShowForm(true);
-  };
-
-  const handleCancelForm = () => {
+  const handleCloseForm = () => {
+    setEditingCategory(null);
     setShowForm(false);
-    setEditingCategory(undefined);
-    setParentCategory(undefined);
   };
 
-  const handleSubmit = (data: CreateCategoryRequest | UpdateCategoryRequest) => {
-    if (editingCategory) {
-      handleUpdateCategory(data as UpdateCategoryRequest);
-    } else {
-      let submitData = data as CreateCategoryRequest;
-      if (parentCategory) {
-        submitData = {
-          ...submitData,
-          parent_id: parentCategory.id,
-          type: parentCategory.type,
-          color: parentCategory.color,
-        };
+  const handleSubmit = async (data: any) => {
+    try {
+      if (editingCategory) {
+        await categoryService.updateCategory(editingCategory.id, data);
+        showSuccess('Categoria atualizada com sucesso!');
+      } else {
+        await categoryService.createCategory(data);
+        showSuccess('Categoria criada com sucesso!');
       }
-      handleCreateCategory(submitData);
-      setParentCategory(undefined);
+      handleCloseForm();
+      fetchCategories();
+    } catch (err) {
+      showError('Erro ao salvar categoria.');
     }
   };
 
-  // Filtros de categorias
-  const incomeCategories = categories.filter(cat => cat.type === 'income' && !cat.parent_id && (showInactive || cat.is_active));
-  const expenseCategories = categories.filter(cat => cat.type === 'expense' && !cat.parent_id && (showInactive || cat.is_active));
+  const handleDelete = (category: Category) => {
+    setCategoryToDelete(category);
+  };
 
-  const incomeCategoriesWithSubs = incomeCategories.map(cat => ({
-    ...cat,
-    subcategories: categories.filter(sub => sub.parent_id === cat.id && (showInactive || sub.is_active))
-  }));
-  const expenseCategoriesWithSubs = expenseCategories.map(cat => ({
-    ...cat,
-    subcategories: categories.filter(sub => sub.parent_id === cat.id && (showInactive || sub.is_active))
-  }));
+  const confirmDelete = async () => {
+    if (!categoryToDelete) return;
+
+    if (categoryToDelete.subcategories && categoryToDelete.subcategories.length > 0) {
+      showError('Não é possível excluir uma categoria que possui subcategorias.');
+      setCategoryToDelete(null);
+      return;
+    }
+
+    try {
+      await categoryService.deleteCategory(categoryToDelete.id);
+      showSuccess('Categoria excluída com sucesso!');
+      setCategoryToDelete(null);
+      fetchCategories();
+    } catch (err) {
+      showError('Erro ao excluir categoria.');
+    }
+  };
+
+  const renderCategory = (category: Category, isSubcategory = false) => (
+    <div key={category.id} className={`bg-white p-4 rounded-lg shadow-sm ${isSubcategory ? 'ml-8' : ''}`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="w-4 h-4 rounded-full" style={{ backgroundColor: category.color }}></span>
+          <span className="font-semibold">{category.name}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => handleOpenForm(category)} className="p-1 text-blue-600 hover:bg-blue-50 rounded">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L14.732 3.732z" /></svg>
+          </button>
+          <button onClick={() => handleDelete(category)} className="p-1 text-red-600 hover:bg-red-50 rounded">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m-7-7h10" /></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <Layout>
-      {/* Bloco fixo no topo, alinhado ao conteúdo principal */}
-      <div
-        className={`fixed top-0 bg-white shadow z-50 px-4 sm:px-6 lg:px-8 pt-8 pb-4 flex flex-col transition-all duration-300 ${
-          isCollapsed 
-            ? 'left-20 w-[calc(100vw-5rem)]' 
-            : 'left-64 w-[calc(100vw-16rem)]'
-        }`}
-        style={{ minHeight: 110 }}
-      >
-        <div className="flex items-center justify-between mb-6">
+      <div className={`p-4 sm:p-6 lg:p-8 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
           <div>
-            <h1 className="text-4xl font-extrabold text-gray-900">Categorias</h1>
-            <p className="mt-2 text-lg text-gray-600">Gerencie as categorias de suas transações</p>
+            <h1 className="text-3xl lg:text-4xl font-extrabold text-gray-900">Categorias</h1>
+            <p className="mt-2 text-lg text-gray-600">Organize suas transações em categorias e subcategorias.</p>
           </div>
-          <div className="flex items-center gap-6">
-            <label className="flex items-center cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={showInactive}
-                onChange={() => setShowInactive(v => !v)}
-                className="form-checkbox h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300"
-              />
-              <span className="ml-2 text-base text-gray-700">Exibir categorias inativas</span>
-            </label>
-            <button
-              onClick={() => {
-                setShowForm(true);
-                setEditingCategory(undefined);
-              }}
-              className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
-            >
-              + Nova Categoria
-            </button>
+          <button
+            onClick={() => handleOpenForm()}
+            className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
+          >
+            + Adicionar Categoria
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+          <div>
+            <h2 className="text-xl font-bold text-gray-800 mb-4 border-b-2 border-green-400 pb-2">Receitas</h2>
+            <div className="space-y-4">
+              {categories.filter(c => c.type === 'income').map(category => (
+                <div key={category.id}>
+                  {renderCategory(category)}
+                  {category.subcategories && category.subcategories.map(sub => renderCategory(sub, true))}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-800 mb-4 border-b-2 border-red-400 pb-2">Despesas</h2>
+            <div className="space-y-4">
+              {categories.filter(c => c.type === 'expense').map(category => (
+                <div key={category.id}>
+                  {renderCategory(category)}
+                  {category.subcategories && category.subcategories.map(sub => renderCategory(sub, true))}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
-      {/* Espaço para não sobrepor o conteúdo */}
-      <div className="h-[110px]"></div>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Coluna Receita */}
-          <div className="bg-white rounded-xl shadow p-6">
-            <h2 className="text-2xl font-bold mb-4">Receita</h2>
-            <CategoryList
-              categories={incomeCategoriesWithSubs}
-              onEdit={handleEditCategory}
-              onDelete={handleDeleteCategory}
-              onAddSubcategory={handleAddSubcategory}
-              isLoading={isLoading}
-            />
-          </div>
-          {/* Coluna Despesa */}
-          <div className="bg-white rounded-xl shadow p-6">
-            <h2 className="text-2xl font-bold mb-4">Despesa</h2>
-            <CategoryList
-              categories={expenseCategoriesWithSubs}
-              onEdit={handleEditCategory}
-              onDelete={handleDeleteCategory}
-              onAddSubcategory={handleAddSubcategory}
-              isLoading={isLoading}
-            />
-          </div>
-        </div>
-        {/* Formulário lateral/modal */}
-        {(showForm || editingCategory) && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto relative">
-              <button
-                onClick={handleCancelForm}
-                className="absolute top-6 right-8 text-gray-400 hover:text-gray-600 text-3xl"
-                title="Fechar"
-              >
-                &times;
+
+        {showForm && (
+          <div className={`fixed inset-0 bg-black bg-opacity-30 z-50 flex items-center justify-center p-4 ${!isCollapsed ? 'lg:pl-64' : 'lg:pl-20'}`}>
+            <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-lg relative">
+              <button onClick={handleCloseForm} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
-              <CategoryForm
-                category={editingCategory}
-                parentCategories={categories.filter(cat => !cat.parent_id && cat.is_active)}
-                onSubmit={handleSubmit}
-                onCancel={handleCancelForm}
-                isLoading={isLoading}
-                parentCategory={parentCategory}
-              />
+              <CategoryForm category={editingCategory || undefined} onSubmit={handleSubmit} onCancel={handleCloseForm} />
             </div>
           </div>
         )}
-        {/* Modal de confirmação de exclusão */}
+
         {categoryToDelete && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
-              <h2 className="text-xl font-bold mb-4">Excluir categoria</h2>
-              <p className="mb-6">Tem certeza que deseja excluir a categoria <span className="font-semibold">{categoryToDelete.name}</span>?</p>
-              <div className="flex justify-center gap-4">
+          <div className={`fixed inset-0 bg-black bg-opacity-30 z-50 flex items-center justify-center p-4 ${!isCollapsed ? 'lg:pl-64' : 'lg:pl-20'}`}>
+            <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-lg">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Confirmar exclusão</h3>
+              <p className="text-gray-600 mb-6">Tem certeza que deseja excluir a categoria "{categoryToDelete.name}"?</p>
+              <div className="flex justify-end gap-4">
                 <button
-                  onClick={cancelDeleteCategory}
-                  className="px-6 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  onClick={() => setCategoryToDelete(null)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
                 >
                   Cancelar
                 </button>
                 <button
-                  onClick={confirmDeleteCategory}
-                  className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
+                  onClick={confirmDelete}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
                 >
                   Excluir
                 </button>

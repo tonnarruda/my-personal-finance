@@ -16,22 +16,25 @@ type Account struct {
 }
 
 type CreateAccountRequest struct {
-	Currency       string    `json:"currency" binding:"required"`
-	Name           string    `json:"name" binding:"required"`
-	Color          string    `json:"color"`
-	IsActive       bool      `json:"is_active"`
-	UserID         string    `json:"user_id"`
-	Type           string    `json:"type" binding:"required,oneof=income expense"` // income ou expense
-	DueDate        time.Time `json:"due_date"`                                     // Data de vencimento da transação inicial
-	CompetenceDate time.Time `json:"competence_date"`                              // Data de competência da transação inicial
-	InitialValue   float64   `json:"initial_value"`                                // Valor inicial da conta em reais
+	Currency       string  `json:"currency" binding:"required"`
+	Name           string  `json:"name" binding:"required"`
+	Color          string  `json:"color"`
+	IsActive       bool    `json:"is_active"`
+	UserID         string  `json:"user_id"`
+	Type           string  `json:"type" binding:"required,oneof=income expense"` // income ou expense
+	DueDate        string  `json:"due_date"`                                     // Data de vencimento da transação inicial
+	CompetenceDate string  `json:"competence_date"`                              // Data de competência da transação inicial
+	InitialValue   float64 `json:"initial_value"`                                // Valor inicial da conta em reais
 }
 
 type UpdateAccountRequest struct {
-	Currency string `json:"currency"`
-	Name     string `json:"name"`
-	Color    string `json:"color"`
-	Type     string `json:"type" binding:"oneof=income expense"` // income ou expense
-	IsActive bool   `json:"is_active"`
-	UserID   string `json:"user_id" binding:"required"`
+	Currency       string  `json:"currency"`
+	Name           string  `json:"name"`
+	Color          string  `json:"color"`
+	Type           string  `json:"type" binding:"oneof=income expense"` // income ou expense
+	IsActive       bool    `json:"is_active"`
+	UserID         string  `json:"user_id" binding:"required"`
+	DueDate        string  `json:"due_date"`        // Data de vencimento da transação inicial
+	CompetenceDate string  `json:"competence_date"` // Data de competência da transação inicial
+	InitialValue   float64 `json:"initial_value"`   // Valor inicial da conta em reais
 }

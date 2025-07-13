@@ -26,9 +26,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         setIsMobileOpen={setIsMobileOpen}
       />
       
-      <main className={`flex-1 transition-all duration-300 ${
-        isCollapsed ? 'lg:ml-20' : 'lg:ml-64'
-      } p-4 sm:p-6 lg:p-8`}>
+      <main className="flex-1 transition-all duration-300">
+        
         {children}
       </main>
     </div>

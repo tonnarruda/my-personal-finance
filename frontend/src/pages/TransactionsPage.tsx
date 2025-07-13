@@ -56,6 +56,11 @@ const TransactionsPage: React.FC = () => {
     fetchData();
   }, []);
 
+  // Efeito para recarregar quando os filtros mudarem
+  useEffect(() => {
+    fetchData();
+  }, [selectedMonthYear.month, selectedMonthYear.year, selectedCurrency, isCustomDateRange, customStartDate, customEndDate]);
+
   // Fechar dropdown quando clicar fora
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -256,56 +261,52 @@ const TransactionsPage: React.FC = () => {
     return false;
   }
 
-  // Aplique os filtros nas transações:
+  // Filtrar transações por moeda, banco e categoria
   const transactionsForCurrency = transactions.filter(t => {
     const acc = accounts.find(a => a.id === t.account_id);
-    const { month, year } = extractMonthYear(t.competence_date);
     const bankMatch = selectedBank === '' || t.account_id === selectedBank;
     const categoryMatch = transactionMatchesCategory(t, selectedCategory);
-    
-    // Filtro por range de data personalizado
-    if (isCustomDateRange && customStartDate && customEndDate) {
-      const competenceDate = parseDateString(t.competence_date);
+    const currencyMatch = acc?.currency === selectedCurrency;
+
+    // Para range personalizado
+    if (isCustomDateRange) {
+      if (!customStartDate || !customEndDate) return false;
+      const transactionDate = parseDateString(t.competence_date);
       const startDate = parseDateString(customStartDate);
       const endDate = parseDateString(customEndDate);
-      
-      if (competenceDate && startDate && endDate) {
-        const dateMatch = competenceDate >= startDate && competenceDate <= endDate;
-        return acc && acc.currency === selectedCurrency && bankMatch && categoryMatch && dateMatch;
+      if (!transactionDate || !startDate || !endDate) return false;
+      return currencyMatch && bankMatch && categoryMatch && 
+             transactionDate >= startDate && transactionDate <= endDate;
+    }
+
+    // Para visualização mensal
+    const competence = parseDateString(t.competence_date);
+    const monthMatch = competence?.getMonth() === selectedMonthYear.month - 1;
+    const yearMatch = competence?.getFullYear() === selectedMonthYear.year;
+
+    return currencyMatch && bankMatch && categoryMatch && monthMatch && yearMatch;
+  });
+
+  // Remover duplicatas de transferências
+  const transactionsForCurrencySorted = transactionsForCurrency
+    .filter((transaction, index, array) => {
+      // Se não é transferência, manter
+      if (!isTransferTransaction(transaction)) {
+        return true;
       }
-    }
-    
-    return (
-      acc &&
-      acc.currency === selectedCurrency &&
-      month === selectedMonthYear.month &&
-      year === selectedMonthYear.year &&
-      bankMatch &&
-      categoryMatch
-    );
-  });
-
-  // Filtrar transferências duplicadas - manter apenas uma por transfer_id
-  const transactionsWithoutDuplicateTransfers = transactionsForCurrency.filter((transaction, index, array) => {
-    // Se não é transferência, manter
-    if (!isTransferTransaction(transaction)) {
-      return true;
-    }
-    
-    // Se é transferência, manter apenas a primeira ocorrência por transfer_id
-    const firstOccurrenceIndex = array.findIndex(t => 
-      isTransferTransaction(t) && t.transfer_id === transaction.transfer_id
-    );
-    return index === firstOccurrenceIndex;
-  });
-
-  // Ordenar transações da competência selecionada pela data de lançamento (due_date)
-  const transactionsForCurrencySorted = [...transactionsWithoutDuplicateTransfers].sort((a, b) => {
-    const da = parseDateString(a.due_date);
-    const db = parseDateString(b.due_date);
-    if (!da || !db) return 0;
-    return da.getTime() - db.getTime();
-  });
+      
+      // Se é transferência, manter apenas a primeira ocorrência por transfer_id
+      const firstOccurrenceIndex = array.findIndex(t => 
+        isTransferTransaction(t) && t.transfer_id === transaction.transfer_id
+      );
+      return index === firstOccurrenceIndex;
+    })
+    .sort((a, b) => {
+      const dateA = parseDateString(a.due_date);
+      const dateB = parseDateString(b.due_date);
+      if (!dateA || !dateB) return 0;
+      return dateA.getTime() - dateB.getTime();
+    });
 
   // Encontre a menor data de lançamento do período selecionado
   const datasDoMes = transactionsForCurrencySorted.map(t => parseDateString(t.due_date)).filter(Boolean);
@@ -742,215 +743,204 @@ const TransactionsPage: React.FC = () => {
 
   return (
     <Layout>
-      {/* Bloco fixo no topo, alinhado ao conteúdo principal */}
-      <div
-        className={`fixed top-0 bg-white shadow z-50 px-4 sm:px-6 lg:px-8 pt-8 pb-4 flex flex-col transition-all duration-300 ${
-          isCollapsed 
-            ? 'left-20 w-[calc(100vw-5rem)]' 
-            : 'left-64 w-[calc(100vw-16rem)]'
-        }`}
-        style={{ minHeight: 110 }}
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className={`p-4 sm:p-6 lg:p-8 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900">Transações</h1>
-            <p className="mt-2 text-sm sm:text-lg text-gray-600">Gerencie suas transações financeiras</p>
+            <h1 className="text-3xl lg:text-4xl font-extrabold text-gray-900">Transações</h1>
+            <p className="mt-2 text-lg text-gray-600">Gerencie suas transações financeiras</p>
           </div>
           <button
             onClick={handleOpenForm}
-            className="px-4 sm:px-6 py-2 sm:py-3 rounded-xl text-sm sm:text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
+            className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
           >
             + Nova Transação
           </button>
         </div>
-        {/* Tabs de currency */}
-        <div className="flex gap-1 sm:gap-2 mb-4 overflow-x-auto">
-          {currencies.map(cur => (
-            <button
-              key={cur}
-              onClick={() => setSelectedCurrency(cur)}
-              className={`px-3 sm:px-6 py-2 rounded-xl font-semibold text-sm sm:text-base transition-colors border flex-shrink-0 ${selectedCurrency === cur ? 'bg-indigo-50 text-indigo-700 border-indigo-400' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
-            >
-              {cur}
-            </button>
-          ))}
-        </div>
-        {/* Linha com filtros e seletor de mês */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-6 w-full mb-2">
-          {/* Filtros à esquerda */}
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
-            <div className="w-full sm:w-auto">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Banco</label>
-              <Select
-                value={selectedBank}
-                onChange={val => setSelectedBank(val)}
-                options={[
-                  { value: '', label: 'Todos' },
-                  ...(accountsByCurrency[selectedCurrency]?.sort((a, b) => a.name.localeCompare(b.name)).map(acc => ({ value: acc.id, label: acc.name })) || [])
-                ]}
-                className="w-full sm:min-w-[200px]"
-              />
-            </div>
-            <div className="w-full sm:w-auto">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-              <CategorySelect
-                value={selectedCategory}
-                onChange={val => setSelectedCategory(val)}
-                options={[
-                  { value: '', label: 'Todas' },
-                  ...getCategoryOptions()
-                ]}
-                className="w-full sm:min-w-[200px]"
-              />
-            </div>
+
+        <div className="bg-white shadow rounded-2xl p-6">
+          <div className="flex gap-1 sm:gap-2 mb-4 overflow-x-auto">
+            {currencies.map(cur => (
+              <button
+                key={cur}
+                onClick={() => setSelectedCurrency(cur)}
+                className={`px-3 sm:px-6 py-2 rounded-xl font-semibold text-sm sm:text-base transition-colors border flex-shrink-0 ${selectedCurrency === cur ? 'bg-indigo-50 text-indigo-700 border-indigo-400' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+              >
+                {cur}
+              </button>
+            ))}
           </div>
 
-          {/* Seletor de mês no centro */}
-          <div className="flex items-center justify-center gap-2 sm:gap-4 select-none relative">
-            <button
-              className="p-1 sm:p-2 rounded-full hover:bg-indigo-100 active:scale-90 transition group shadow-sm"
-              onClick={handlePrevMonth}
-              aria-label="Mês anterior"
-              title="Mês anterior"
-            >
-              <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400 group-hover:text-indigo-600 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-          
-          {/* Botão principal do mês com dropdown */}
-          <div className="relative">
-            <button
-              className="px-4 sm:px-6 lg:px-8 py-2 rounded-2xl bg-gradient-to-r from-indigo-50 via-white to-indigo-50 shadow-lg border border-indigo-100 text-lg sm:text-xl lg:text-2xl font-extrabold text-gray-900 tracking-wide transition-all duration-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 flex items-center gap-2"
-              style={{ minWidth: 'auto', textAlign: 'center', letterSpacing: '0.04em' }}
-              onClick={() => setShowMonthDropdown(!showMonthDropdown)}
-            >
-              <span className="inline-flex items-center gap-1 sm:gap-2">
-                <svg className="w-4 h-4 sm:w-6 sm:h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2z" />
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-6 w-full">
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
+              <div className="w-full sm:w-auto">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Banco</label>
+                <Select
+                  value={selectedBank}
+                  onChange={val => setSelectedBank(val)}
+                  options={[
+                    { value: '', label: 'Todos' },
+                    ...(accountsByCurrency[selectedCurrency]?.sort((a, b) => a.name.localeCompare(b.name)).map(acc => ({ value: acc.id, label: acc.name })) || [])
+                  ]}
+                  className="w-full sm:min-w-[200px]"
+                />
+              </div>
+              <div className="w-full sm:w-auto">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                <CategorySelect
+                  value={selectedCategory}
+                  onChange={val => setSelectedCategory(val)}
+                  options={[
+                    { value: '', label: 'Todas' },
+                    ...getCategoryOptions()
+                  ]}
+                  className="w-full sm:min-w-[200px]"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 sm:gap-4 select-none relative">
+              <button
+                className="p-1 sm:p-2 rounded-full hover:bg-indigo-100 active:scale-90 transition group shadow-sm"
+                onClick={handlePrevMonth}
+                aria-label="Mês anterior"
+                title="Mês anterior"
+              >
+                <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400 group-hover:text-indigo-600 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                <span className="hidden sm:inline">{getDisplayPeriod()}</span>
-                <span className="sm:hidden">{getDisplayPeriod().split(' ')[0]}</span>
-              </span>
-              <svg className={`w-3 h-3 sm:w-4 sm:h-4 text-indigo-400 transition-transform ${showMonthDropdown ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
+              </button>
             
-            {/* Menu dropdown */}
-            {showMonthDropdown && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50">
-                <button
-                  className="w-full px-4 py-3 text-left text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors flex items-center gap-2"
-                  onClick={handleGoToPreviousMonth}
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            {/* Botão principal do mês com dropdown */}
+            <div className="relative">
+              <button
+                className="px-4 sm:px-6 lg:px-8 py-2 rounded-2xl bg-gradient-to-r from-indigo-50 via-white to-indigo-50 shadow-lg border border-indigo-100 text-lg sm:text-xl lg:text-2xl font-extrabold text-gray-900 tracking-wide transition-all duration-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 flex items-center gap-2"
+                style={{ minWidth: 'auto', textAlign: 'center', letterSpacing: '0.04em' }}
+                onClick={() => setShowMonthDropdown(!showMonthDropdown)}
+              >
+                <span className="inline-flex items-center gap-1 sm:gap-2">
+                  <svg className="w-4 h-4 sm:w-6 sm:h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2z" />
                   </svg>
-                  Mês anterior
-                </button>
-                <button
-                  className="w-full px-4 py-3 text-left text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors flex items-center gap-2"
-                  onClick={handleGoToCurrentMonth}
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Mês atual
-                </button>
-                <hr className="my-2 border-gray-100" />
-                <div className="px-4 py-2">
+                  <span className="hidden sm:inline">{getDisplayPeriod()}</span>
+                  <span className="sm:hidden">{getDisplayPeriod().split(' ')[0]}</span>
+                </span>
+                <svg className={`w-3 h-3 sm:w-4 sm:h-4 text-indigo-400 transition-transform ${showMonthDropdown ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {/* Menu dropdown */}
+              {showMonthDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50">
                   <button
-                    className={`w-full px-4 py-3 text-left transition-colors flex items-center gap-2 rounded-lg ${
-                      isCustomDateRange
-                        ? 'bg-indigo-100 text-indigo-700'
-                        : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-700'
-                    }`}
-                    onClick={handleSetCustomRange}
+                    className="w-full px-4 py-3 text-left text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors flex items-center gap-2"
+                    onClick={handleGoToPreviousMonth}
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
-                    Personalizado
-                    {isCustomDateRange && (
-                      <span className="ml-auto text-xs bg-indigo-600 text-white px-2 py-1 rounded-full">
-                        Ativo
-                      </span>
-                    )}
+                    Mês anterior
                   </button>
-                  
-                  {/* Campos de data personalizados */}
-                  <div className="mt-3 space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Data inicial</label>
-                      <DateInput
-                        value={customStartDate}
-                        onChange={handleCustomStartDateChange}
-                        placeholder="DD/MM/AAAA"
-                        className="text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Data final</label>
-                      <DateInput
-                        value={customEndDate}
-                        onChange={handleCustomEndDateChange}
-                        placeholder="DD/MM/AAAA"
-                        className="text-sm"
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        className={`flex-1 px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-700 ${
-                          isCustomRangeValid()
-                            ? 'bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        }`}
-                        onClick={handleApplyCustomRange}
-                        disabled={!isCustomRangeValid()}
-                      >
-                        Aplicar
-                      </button>
+                  <button
+                    className="w-full px-4 py-3 text-left text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors flex items-center gap-2"
+                    onClick={handleGoToCurrentMonth}
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Mês atual
+                  </button>
+                  <hr className="my-2 border-gray-100" />
+                  <div className="px-4 py-2">
+                    <button
+                      className={`w-full px-4 py-3 text-left transition-colors flex items-center gap-2 rounded-lg ${
+                        isCustomDateRange
+                          ? 'bg-indigo-100 text-indigo-700'
+                          : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-700'
+                      }`}
+                      onClick={handleSetCustomRange}
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      Personalizado
                       {isCustomDateRange && (
-                        <button
-                          className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors duration-150 font-medium text-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
-                          onClick={handleGoToCurrentMonth}
-                        >
-                          Limpar
-                        </button>
+                        <span className="ml-auto text-xs bg-indigo-600 text-white px-2 py-1 rounded-full">
+                          Ativo
+                        </span>
                       )}
+                    </button>
+                    
+                    {/* Campos de data personalizados */}
+                    <div className="mt-3 space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Data inicial</label>
+                        <DateInput
+                          value={customStartDate}
+                          onChange={handleCustomStartDateChange}
+                          placeholder="DD/MM/AAAA"
+                          className="text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Data final</label>
+                        <DateInput
+                          value={customEndDate}
+                          onChange={handleCustomEndDateChange}
+                          placeholder="DD/MM/AAAA"
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          className={`flex-1 px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-700 ${
+                            isCustomRangeValid()
+                              ? 'bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800'
+                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          }`}
+                          onClick={handleApplyCustomRange}
+                          disabled={!isCustomRangeValid()}
+                        >
+                          Aplicar
+                        </button>
+                        {isCustomDateRange && (
+                          <button
+                            className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors duration-150 font-medium text-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                            onClick={handleGoToCurrentMonth}
+                          >
+                            Limpar
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-          
-            <button
-              className="p-1 sm:p-2 rounded-full hover:bg-indigo-100 active:scale-90 transition group shadow-sm"
-              onClick={handleNextMonth}
-              aria-label="Próximo mês"
-              title="Próximo mês"
-            >
-              <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400 group-hover:text-indigo-600 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
+              )}
+            </div>
+            
+              <button
+                className="p-1 sm:p-2 rounded-full hover:bg-indigo-100 active:scale-90 transition group shadow-sm"
+                onClick={handleNextMonth}
+                aria-label="Próximo mês"
+                title="Próximo mês"
+              >
+                <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400 group-hover:text-indigo-600 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
 
-          {/* Saldo anterior à direita */}
-          <div className="text-sm sm:text-base text-gray-700 font-medium text-center lg:text-right">
-            Saldo anterior: <span className="font-bold">
-              {saldoAnterior.toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency })}
-            </span>
+            {/* Saldo anterior à direita */}
+            <div className="text-sm sm:text-base text-gray-700 font-medium text-center lg:text-right">
+              Saldo anterior: <span className="font-bold">
+                {saldoAnterior.toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency })}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
-      {/* Espaço para não sobrepor o conteúdo */}
-      <div className="h-[230px] sm:h-[200px] lg:h-[230px]"></div>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Tabela de transações agrupada por data */}
-        <div className="bg-white rounded-2xl shadow mt-6 overflow-x-auto">
+
+        {/* Tabela de transações */}
+        <div className="bg-white w-full rounded-2xl shadow">
           {sortedDates.length === 0 && (
             <div className="text-center py-6 text-gray-400">Nenhuma transação encontrada.</div>
           )}
@@ -1131,47 +1121,47 @@ const TransactionsPage: React.FC = () => {
             </div>
           ))}
         </div>
-      </div>
-      
-      {/* Modal de formulário de transação */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-6xl max-h-[90vh] overflow-y-auto relative">
-            <button
-              onClick={handleCloseForm}
-              className="absolute top-6 right-8 text-gray-400 hover:text-gray-600 text-3xl"
-              title="Fechar"
-            >
-              &times;
-            </button>
-            <TransactionForm onSubmit={handleSubmitForm} onCancel={handleCloseForm} currency={selectedCurrency} {...(editingTransaction ? { ...editingTransaction } : {})} />
-          </div>
-        </div>
-      )}
-      
-      {/* Modal de confirmação de exclusão de transação */}
-      {transactionToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
-            <h2 className="text-xl font-bold mb-4">Excluir transação</h2>
-            <p className="mb-6">Tem certeza que deseja excluir a transação <span className="font-semibold">{transactionToDelete.description}</span>?</p>
-            <div className="flex justify-center gap-4">
+        
+        {/* Modal de formulário de transação */}
+        {showForm && (
+          <div className={`fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4 ${!isCollapsed ? 'lg:pl-64' : 'lg:pl-20'}`}>
+            <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-6xl max-h-[90vh] overflow-y-auto relative">
               <button
-                onClick={cancelDeleteTransaction}
-                className="px-6 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                onClick={handleCloseForm}
+                className="absolute top-6 right-8 text-gray-400 hover:text-gray-600 text-3xl"
+                title="Fechar"
               >
-                Cancelar
+                &times;
               </button>
-              <button
-                onClick={confirmDeleteTransaction}
-                className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
-              >
-                Excluir
-              </button>
+              <TransactionForm onSubmit={handleSubmitForm} onCancel={handleCloseForm} currency={selectedCurrency} {...(editingTransaction ? { ...editingTransaction } : {})} />
             </div>
           </div>
-        </div>
-      )}
+        )}
+        
+        {/* Modal de confirmação de exclusão de transação */}
+        {transactionToDelete && (
+          <div className={`fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4 ${!isCollapsed ? 'lg:pl-64' : 'lg:pl-20'}`}>
+            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
+              <h2 className="text-xl font-bold mb-4">Excluir transação</h2>
+              <p className="mb-6">Tem certeza que deseja excluir a transação <span className="font-semibold">{transactionToDelete.description}</span>?</p>
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={cancelDeleteTransaction}
+                  className="px-6 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDeleteTransaction}
+                  className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
+                >
+                  Excluir
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </Layout>
   );
 };

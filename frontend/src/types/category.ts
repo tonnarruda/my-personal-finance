@@ -9,6 +9,7 @@ export interface Category {
   icon: string;
   parent_id?: string;
   is_active: boolean;
+  subcategories?: Category[];
   created_at: string;
   updated_at: string;
 }

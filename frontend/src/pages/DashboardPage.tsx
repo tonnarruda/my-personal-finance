@@ -12,6 +12,8 @@ import ModernMetrics from '../components/ModernMetrics';
 import TransactionForm from '../components/TransactionForm';
 import AccountForm from '../components/AccountForm';
 import { useToast } from '../contexts/ToastContext';
+import { useSidebar } from '../contexts/SidebarContext';
+import { CreateAccountRequest } from '../types/account';
 
 const DashboardPage: React.FC = () => {
   const [nome, setNome] = useState('');
@@ -41,6 +43,7 @@ const DashboardPage: React.FC = () => {
   });
   
   const { showSuccess, showError } = useToast();
+  const { isCollapsed } = useSidebar();
 
   // Salvar estado do checkbox no localStorage quando mudar
   useEffect(() => {
@@ -382,16 +385,16 @@ const DashboardPage: React.FC = () => {
   }
 
   // Função utilitária para converter dados de conta para o backend
-  function toAccountBackendPayload(obj: any) {
+  function toAccountBackendPayload(obj: any): CreateAccountRequest {
     return {
       name: obj.name,
       currency: obj.currency,
       color: obj.color,
       type: obj.accountType,
       is_active: true,
-      due_date: obj.initialDate ? formatDateToISO(obj.initialDate) : undefined,
-      competence_date: obj.initialDate ? formatDateToISO(obj.initialDate) : undefined,
-      initial_value: obj.initialValue || 0,
+      due_date: obj.initialDate,
+      competence_date: obj.initialDate,
+      initial_value: obj.initialValue || 0
     };
   }
 
@@ -414,7 +417,7 @@ const DashboardPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto">
+      <div className={`p-4 sm:p-6 lg:p-8 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
         {/* Topo: Saudação e subtítulo */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mt-2 mb-8">
           <div>
@@ -484,7 +487,7 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* Abas de currency */}
-        <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 mt-8">
+        <div className="w-full max-w-screen-xl px-0 mx-auto mt-8">
           <div className="flex gap-2 mb-6">
             {currencies.map(cur => (
               <button
@@ -498,7 +501,7 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
         {/* Cards principais filtrados pela currency selecionada */}
-        <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row gap-6">
+        <div className="w-full max-w-screen-xl px-0 mx-auto flex flex-col lg:flex-row gap-6">
           {/* Card Gráfico Moderno */}
           <div className="flex-1 bg-white rounded-2xl shadow p-8 flex flex-col min-w-0">
             <div className="text-xl font-bold text-gray-900 mb-6">Visão Mensal</div>
@@ -530,7 +533,7 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* Card Saldos de Caixa */}
-        <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 mt-6">
+        <div className="w-full max-w-screen-xl px-0 mx-auto mt-6">
           <div className="bg-white rounded-2xl shadow p-8 flex flex-col min-w-0">
             <div className="flex items-center justify-between mb-6">
               <div className="text-xl font-bold text-gray-900">Saldos de caixa</div>
@@ -596,12 +599,12 @@ const DashboardPage: React.FC = () => {
         </div>
         
         {/* Cards de pizza por categoria filtrados pela currency */}
-        <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="w-full max-w-screen-xl px-0 mx-auto mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Despesas por categoria */}
           <div className="bg-white rounded-2xl shadow p-8 flex flex-col min-w-0">
             <div className="text-xl font-bold text-gray-900 mb-6">Despesas por categoria</div>
-            <div className="flex flex-row items-center gap-8 flex-1">
-              <div className="flex-shrink-0 flex items-center justify-center">
+            <div className="flex flex-col sm:flex-row items-center gap-8 flex-1">
+              <div className="flex-shrink-0 flex items-center justify-center mb-4 sm:mb-0">
                 {/* Gráfico donut SVG */}
                 <svg width="160" height="160" viewBox="0 0 36 36" className="block">
                   {(() => {
@@ -627,7 +630,7 @@ const DashboardPage: React.FC = () => {
                   })()}
                 </svg>
               </div>
-              <div className="flex-1 flex flex-col justify-center gap-2">
+              <div className="flex-1 flex flex-col justify-center gap-2 w-full">
                 {despesasPorCategoria.map((cat: CategoriaData) => (
                   <div key={cat.label} className="flex items-center gap-2 mb-1">
                     <span className="w-3 h-3 rounded-full" style={{ background: cat.color }} />
@@ -647,8 +650,8 @@ const DashboardPage: React.FC = () => {
           {/* Receitas por categoria */}
           <div className="bg-white rounded-2xl shadow p-8 flex flex-col min-w-0">
             <div className="text-xl font-bold text-gray-900 mb-6">Receitas por categoria</div>
-            <div className="flex flex-row items-center gap-8 flex-1">
-              <div className="flex-shrink-0 flex items-center justify-center">
+            <div className="flex flex-col sm:flex-row items-center gap-8 flex-1">
+              <div className="flex-shrink-0 flex items-center justify-center mb-4 sm:mb-0">
                 {/* Gráfico donut SVG */}
                 <svg width="160" height="160" viewBox="0 0 36 36" className="block">
                   {(() => {
@@ -674,7 +677,7 @@ const DashboardPage: React.FC = () => {
                   })()}
                 </svg>
               </div>
-              <div className="flex-1 flex flex-col justify-center gap-2">
+              <div className="flex-1 flex flex-col justify-center gap-2 w-full">
                 {receitasPorCategoria.map((cat: CategoriaData) => (
                   <div key={cat.label} className="flex items-center gap-2 mb-1">
                     <span className="w-3 h-3 rounded-full" style={{ background: cat.color }} />
@@ -696,7 +699,7 @@ const DashboardPage: React.FC = () => {
       
       {/* Modal Overlay */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 ${!isCollapsed ? 'lg:pl-64' : 'lg:pl-20'}`}>
           <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-6xl max-h-[90vh] overflow-y-auto relative">
             <button
               onClick={handleCloseModal}
@@ -718,7 +721,7 @@ const DashboardPage: React.FC = () => {
 
       {/* Account Modal Overlay */}
       {isAccountModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 ${!isCollapsed ? 'lg:pl-64' : 'lg:pl-20'}`}>
           <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto relative">
             <button
               onClick={handleCloseAccountModal}

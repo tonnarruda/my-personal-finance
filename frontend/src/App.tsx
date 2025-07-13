@@ -11,6 +11,7 @@ import CategoriesPage from './pages/CategoriesPage';
 import TransactionsPage from './pages/TransactionsPage';
 import ReportsPage from './pages/ReportsPage';
 import { isAuthenticated } from './services/auth';
+import ToastContainer from './components/ToastContainer';
 import './App.css';
 
 const App: React.FC = () => {
@@ -39,6 +40,7 @@ const App: React.FC = () => {
     <Router>
       <ToastProvider>
         <SidebarProvider>
+          <ToastContainer />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
