@@ -24,7 +24,7 @@ const jwtSecret = "supersecretkey123" // Troque por uma chave forte em produçã
 // }
 
 const sessionCookieName = "session_token"
-const sessionDuration = 30 * time.Minute
+const sessionDuration = 120 * time.Minute
 
 // Middleware para proteger rotas
 func SessionAuthMiddleware() gin.HandlerFunc {
