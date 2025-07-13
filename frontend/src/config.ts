@@ -8,13 +8,14 @@ const getApiBaseUrl = (): string => {
   }
   
   // Fallback para produção
-  const isProduction = window.location.hostname !== 'localhost';
+  const hostname = window.location.hostname;
+  const isProduction = hostname !== 'localhost' && hostname !== '127.0.0.1';
   const defaultUrl = isProduction 
     ? 'https://my-personal-finance.onrender.com/api'
     : 'http://localhost:8080/api';
     
   console.log('[CONFIG] Usando URL da API padrão:', defaultUrl);
-  console.log('[CONFIG] Hostname:', window.location.hostname);
+  console.log('[CONFIG] Hostname:', hostname);
   console.log('[CONFIG] É produção?', isProduction);
   
   return defaultUrl;

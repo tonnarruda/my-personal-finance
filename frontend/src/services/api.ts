@@ -75,9 +75,12 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => {
+    console.log('[API-RESPONSE] Resposta recebida:', response.config.url, response.status);
+    console.log('[API-RESPONSE] Data:', response.data);
     return response;
   },
   (error) => {
+    console.error('[API-RESPONSE] Erro:', error.config?.url, error.response?.status);
     if (error.response && error.response.status === 401) {
       // Limpa o estado do usuário (logout)
       clearAuth();
@@ -254,7 +257,9 @@ export async function login(email: string, senha: string) {
   
   try {
     const response = await api.post('/login', { email, senha });
+    console.log('[LOGIN-API] Resposta completa:', response);
     console.log('[LOGIN-API] Resposta recebida:', response.data);
+    console.log('[LOGIN-API] Headers:', response.headers);
     return response.data;
   } catch (error: any) {
     console.error('[LOGIN-API] Erro na requisição:', error);
