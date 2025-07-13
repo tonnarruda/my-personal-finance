@@ -15,11 +15,19 @@ const AccountsPage: React.FC = () => {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [accountToDelete, setAccountToDelete] = useState<Account | null>(null);
   const [selectedCurrency, setSelectedCurrency] = useState('BRL');
+  const [hideZeroBalance, setHideZeroBalance] = useState(() => {
+    const saved = localStorage.getItem('hideZeroBalance');
+    return saved ? JSON.parse(saved) : false;
+  });
   const { showSuccess, showError } = useToast();
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('hideZeroBalance', JSON.stringify(hideZeroBalance));
+  }, [hideZeroBalance]);
 
   const fetchData = async () => {
     try {
@@ -45,7 +53,23 @@ const AccountsPage: React.FC = () => {
     if (!accountsByCurrency[acc.currency]) accountsByCurrency[acc.currency] = [];
     accountsByCurrency[acc.currency].push(acc);
   });
-  const currencies = Object.keys(accountsByCurrency);
+
+  // Filtrar currencies que têm pelo menos uma conta com saldo
+  const currenciesWithBalance = Object.keys(accountsByCurrency).filter(currency => {
+    if (!hideZeroBalance) return true;
+    return accountsByCurrency[currency].some(account => {
+      const confirmedBalance = getAccountConfirmedBalance(account.id);
+      const projectedBalance = getAccountProjectedBalance(account.id);
+      return confirmedBalance !== 0 || projectedBalance !== 0;
+    });
+  });
+
+  // Se a moeda selecionada não tem saldo, selecionar a primeira moeda disponível
+  useEffect(() => {
+    if (hideZeroBalance && !currenciesWithBalance.includes(selectedCurrency) && currenciesWithBalance.length > 0) {
+      setSelectedCurrency(currenciesWithBalance[0]);
+    }
+  }, [hideZeroBalance, selectedCurrency, currenciesWithBalance]);
 
   // Função para calcular o saldo confirmado (pagos) de uma conta
   function getAccountConfirmedBalance(accountId: string) {
@@ -109,7 +133,18 @@ const AccountsPage: React.FC = () => {
     <Layout>
       <div className={`p-4 sm:p-6 lg:p-8 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Contas</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-3xl font-bold text-gray-900">Contas</h1>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hideZeroBalance}
+                onChange={(e) => setHideZeroBalance(e.target.checked)}
+                className="form-checkbox h-5 w-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+              />
+              <span className="text-gray-700">Esconder Contas Zeradas</span>
+            </label>
+          </div>
           <button
             onClick={handleOpenForm}
             className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700 flex items-center gap-2"
@@ -128,7 +163,7 @@ const AccountsPage: React.FC = () => {
         {/* Seletor de moeda */}
         <div className="bg-white shadow rounded-2xl p-6 mb-8">
           <div className="flex gap-1 sm:gap-2 mb-4 overflow-x-auto">
-            {currencies.map(cur => (
+            {currenciesWithBalance.map(cur => (
               <button
                 key={cur}
                 onClick={() => setSelectedCurrency(cur)}
@@ -146,7 +181,14 @@ const AccountsPage: React.FC = () => {
 
         {/* Grid de contas */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {accountsByCurrency[selectedCurrency]?.sort((a, b) => a.name.localeCompare(b.name)).map(account => (
+          {accountsByCurrency[selectedCurrency]?.filter(account => {
+            if (!hideZeroBalance) return true;
+            const confirmedBalance = getAccountConfirmedBalance(account.id);
+            const projectedBalance = getAccountProjectedBalance(account.id);
+            return confirmedBalance !== 0 || projectedBalance !== 0;
+          })
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map(account => (
             <div key={account.id} className="bg-white rounded-2xl shadow-sm p-6 flex flex-col">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
