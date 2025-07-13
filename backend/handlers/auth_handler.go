@@ -29,31 +29,47 @@ const sessionDuration = 30 * time.Minute
 // Middleware para proteger rotas
 func SessionAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Log de debug
+		fmt.Printf("[AUTH] Verificando autenticação para: %s | User-Agent: %s\n",
+			c.Request.URL.Path, c.GetHeader("User-Agent"))
+
 		cookie, err := c.Cookie(sessionCookieName)
 		if err != nil {
+			fmt.Printf("[AUTH] ❌ Cookie não encontrado: %v\n", err)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Sessão expirada ou inválida"})
 			return
 		}
+
+		fmt.Printf("[AUTH] ✅ Cookie encontrado, validando JWT...\n")
+
 		// Validar e decodificar JWT
 		claims := jwt.MapClaims{}
 		token, err := jwt.ParseWithClaims(cookie, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(jwtSecret), nil
 		})
 		if err != nil || !token.Valid {
+			fmt.Printf("[AUTH] ❌ JWT inválido: %v\n", err)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Sessão expirada ou inválida"})
 			return
 		}
+
 		// Checar expiração
 		exp, ok := claims["exp"].(float64)
 		if !ok || int64(exp) < time.Now().Unix() {
+			fmt.Printf("[AUTH] ❌ Token expirado\n")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Sessão expirada ou inválida"})
 			return
 		}
+
 		userID, ok := claims["user_id"].(string)
 		if !ok || userID == "" {
+			fmt.Printf("[AUTH] ❌ User ID não encontrado no token\n")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Sessão expirada ou inválida"})
 			return
 		}
+
+		fmt.Printf("[AUTH] ✅ Usuário autenticado: %s\n", userID)
+
 		email, _ := claims["email"].(string)
 		name, _ := claims["name"].(string)
 		// Renovar JWT (rolling session)
@@ -72,9 +88,9 @@ func SessionAuthMiddleware() gin.HandlerFunc {
 			Value:    newTokenString,
 			Path:     "/",
 			MaxAge:   int(sessionDuration.Seconds()),
-			Secure:   true,
+			Secure:   false, // Mudança para false para desenvolvimento
 			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode, // Mudança para Lax para melhor compatibilidade
+			SameSite: http.SameSiteStrictMode, // Mudança para Strict
 		})
 		c.Set("user_id", userID)
 		c.Next()
@@ -124,11 +140,18 @@ func (h *AuthHandler) LoginHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"erro": "dados inválidos", "detalhe": err.Error()})
 		return
 	}
+
+	fmt.Printf("[LOGIN] Tentativa de login para: %s | User-Agent: %s\n",
+		req.Email, c.GetHeader("User-Agent"))
+
 	user, err := h.UserService.AutenticarUsuario(req.Email, req.Senha)
 	if err != nil {
+		fmt.Printf("[LOGIN] ❌ Falha na autenticação: %v\n", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"erro": err.Error()})
 		return
 	}
+
+	fmt.Printf("[LOGIN] ✅ Usuário autenticado: %s\n", user.ID)
 
 	// Configura as categorias padrão para o usuário se for a primeira vez
 	err = h.UserService.SetupDefaultCategoriesForUser(user.ID)
@@ -156,10 +179,12 @@ func (h *AuthHandler) LoginHandler(c *gin.Context) {
 		Value:    tokenString,
 		Path:     "/",
 		MaxAge:   int(sessionDuration.Seconds()),
-		Secure:   true,
+		Secure:   false, // Mudança para false para desenvolvimento
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode, // Mudança para Lax para melhor compatibilidade
+		SameSite: http.SameSiteStrictMode, // Mudança para Strict
 	})
+
+	fmt.Printf("[LOGIN] ✅ Cookie definido para usuário: %s\n", user.ID)
 
 	c.JSON(http.StatusOK, gin.H{
 		"id":    user.ID,
@@ -193,10 +218,10 @@ func (h *AuthHandler) LogoutHandler(c *gin.Context) {
 		Name:     sessionCookieName,
 		Value:    "",
 		Path:     "/",
-		MaxAge:   -1, // Expira imediatamente
-		Secure:   true,
+		MaxAge:   -1,    // Expira imediatamente
+		Secure:   false, // Mudança para false para desenvolvimento
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteStrictMode, // Mudança para Strict
 	})
 	c.JSON(http.StatusOK, gin.H{"message": "Logout realizado com sucesso"})
 }

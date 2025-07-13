@@ -15,10 +15,18 @@ func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *hand
 
 	// Middleware CORS robusto
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000", "https://thefinancer.vercel.app", "https://thefinancer.vercel.app/", "https://vercel.app"},
+		AllowOrigins: []string{
+			"http://localhost:3000",
+			"https://thefinancer.vercel.app",
+			"https://thefinancer.vercel.app/",
+			"https://vercel.app",
+			"https://*.vercel.app",
+			"https://my-personal-finance.vercel.app",
+			"https://my-personal-finance.vercel.app/",
+		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With", "Referer"},
-		ExposeHeaders:    []string{"Content-Length"},
+		ExposeHeaders:    []string{"Content-Length", "Set-Cookie"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
