@@ -65,6 +65,8 @@ func SessionAuthMiddleware() gin.HandlerFunc {
 			"exp":     time.Now().Add(sessionDuration).Unix(),
 		})
 		newTokenString, _ := newToken.SignedString([]byte(jwtSecret))
+
+		// Configuração de cookie melhorada para Safari
 		http.SetCookie(c.Writer, &http.Cookie{
 			Name:     sessionCookieName,
 			Value:    newTokenString,
@@ -72,7 +74,7 @@ func SessionAuthMiddleware() gin.HandlerFunc {
 			MaxAge:   int(sessionDuration.Seconds()),
 			Secure:   true,
 			HttpOnly: true,
-			SameSite: http.SameSiteNoneMode,
+			SameSite: http.SameSiteLaxMode, // Mudança para Lax para melhor compatibilidade
 		})
 		c.Set("user_id", userID)
 		c.Next()
@@ -148,6 +150,7 @@ func (h *AuthHandler) LoginHandler(c *gin.Context) {
 		return
 	}
 
+	// Configuração de cookie melhorada para Safari
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     sessionCookieName,
 		Value:    tokenString,
@@ -155,7 +158,7 @@ func (h *AuthHandler) LoginHandler(c *gin.Context) {
 		MaxAge:   int(sessionDuration.Seconds()),
 		Secure:   true,
 		HttpOnly: true,
-		SameSite: http.SameSiteNoneMode,
+		SameSite: http.SameSiteLaxMode, // Mudança para Lax para melhor compatibilidade
 	})
 
 	c.JSON(http.StatusOK, gin.H{
@@ -182,4 +185,18 @@ func (h *AuthHandler) GetMeHandler(c *gin.Context) {
 		"nome":  user.Nome,
 		"email": user.Email,
 	})
+}
+
+// LogoutHandler limpa o cookie de sessão
+func (h *AuthHandler) LogoutHandler(c *gin.Context) {
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1, // Expira imediatamente
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	c.JSON(http.StatusOK, gin.H{"message": "Logout realizado com sucesso"})
 }

@@ -39,6 +39,13 @@ const api = axios.create({
 // Interceptor para logs de debug
 api.interceptors.request.use(
   (config) => {
+    // Verifica se o usuário está autenticado para rotas protegidas
+    const user = getUser();
+    if (!user && !config.url?.includes('/login') && !config.url?.includes('/signup')) {
+      console.log('Usuário não autenticado, redirecionando para login');
+      window.location.href = '/login';
+      return Promise.reject(new Error('Usuário não autenticado'));
+    }
     return config;
   },
   (error) => {
@@ -230,6 +237,19 @@ export async function login(email: string, senha: string) {
 export async function signup(nome: string, email: string, senha: string) {
   const response = await api.post('/signup', { nome, email, senha });
   return response.data;
+}
+
+// Função para logout
+export async function logout() {
+  try {
+    await api.post('/logout');
+  } catch (error) {
+    console.error('Erro ao fazer logout:', error);
+  } finally {
+    // Sempre limpa o localStorage e redireciona
+    localStorage.removeItem('user');
+    window.location.href = '/login';
+  }
 }
 
 // Função utilitária para buscar ou criar categoria por nome e tipo

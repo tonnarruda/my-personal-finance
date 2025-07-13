@@ -81,9 +81,11 @@ func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *hand
 	// Rotas de autenticação
 	router.OPTIONS("/api/signup", func(c *gin.Context) { c.Status(204) })
 	router.OPTIONS("/api/login", func(c *gin.Context) { c.Status(204) })
+	router.OPTIONS("/api/logout", func(c *gin.Context) { c.Status(204) })
 	router.OPTIONS("/api/me", func(c *gin.Context) { c.Status(204) })
 	router.POST("/api/signup", authHandler.SignupHandler)
 	router.POST("/api/login", authHandler.LoginHandler)
+	router.POST("/api/logout", authHandler.LogoutHandler)
 	// Proteger rota /api/me
 	router.GET("/api/me", handlers.SessionAuthMiddleware(), authHandler.GetMeHandler)
 

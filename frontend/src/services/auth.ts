@@ -1,6 +1,7 @@
+import { logout as apiLogout } from './api';
+
 export function logout() {
-  localStorage.removeItem('user');
-  window.location.href = '/login';
+  apiLogout();
 }
 
 export function setUser(user: any) {
