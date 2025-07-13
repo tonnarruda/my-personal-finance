@@ -565,7 +565,7 @@ const DashboardPage: React.FC = () => {
                       </td>
                     </tr>
                   ) : (
-                    filteredAccountsForCurrency.map((account, idx) => (
+                    filteredAccountsForCurrency.sort((a, b) => a.name.localeCompare(b.name)).map((account, idx) => (
                       <tr key={account.id}>
                         <td className="py-3">
                           <span className="inline-flex items-center gap-2">

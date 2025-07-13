@@ -353,6 +353,7 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
                 { value: '', label: 'Selecione um banco' },
                 ...accounts
                   .filter(acc => acc.currency === currency && acc.is_active)
+                  .sort((a, b) => a.name.localeCompare(b.name))
                   .map(acc => ({ value: acc.id, label: acc.name }))
               ]}
               error={!!errors.account_id}
@@ -371,6 +372,7 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
                   { value: '', label: 'Selecione um banco' },
                   ...accounts
                     .filter(acc => acc.currency === currency && acc.is_active)
+                    .sort((a, b) => a.name.localeCompare(b.name))
                     .map(acc => ({ value: acc.id, label: acc.name }))
                 ]}
                 error={!!errors.category_id}

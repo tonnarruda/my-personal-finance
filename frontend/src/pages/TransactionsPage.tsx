@@ -786,7 +786,7 @@ const TransactionsPage: React.FC = () => {
                 onChange={val => setSelectedBank(val)}
                 options={[
                   { value: '', label: 'Todos' },
-                  ...(accountsByCurrency[selectedCurrency]?.map(acc => ({ value: acc.id, label: acc.name })) || [])
+                  ...(accountsByCurrency[selectedCurrency]?.sort((a, b) => a.name.localeCompare(b.name)).map(acc => ({ value: acc.id, label: acc.name })) || [])
                 ]}
                 className="min-w-[200px]"
               />

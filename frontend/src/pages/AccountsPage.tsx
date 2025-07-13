@@ -240,7 +240,7 @@ const AccountsPage: React.FC = () => {
                   <span className="text-2xl font-bold text-gray-900">Moeda: {currency}</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {accountsByCurrency[currency].map(account => {
+                  {accountsByCurrency[currency].sort((a, b) => a.name.localeCompare(b.name)).map(account => {
                     const saldo = getAccountBalance(account.id);
                     // Iniciais da conta
                     const initials = account.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);

@@ -27,6 +27,7 @@ interface AccountFormProps {
 const typeOptions = [
   { value: 'Conta Corrente', label: 'Conta Corrente' },
   { value: 'Conta Poupança', label: 'Conta Poupança' },
+  { value: 'Conta Investimento', label: 'Conta Investimento' },
   { value: 'Carteira', label: 'Carteira' },
   { value: 'Outro', label: 'Outro' },
 ];
