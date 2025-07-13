@@ -34,14 +34,14 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md">
-        <div className="flex flex-col items-center mb-6">
-          <span className="text-4xl mb-2"><svg width="48" height="48" fill="none" viewBox="0 0 24 24"><rect width="20" height="20" x="2" y="2" rx="6" fill="#111"/><path d="M8 12h8M8 16h4" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg></span>
-          <span className="text-3xl font-bold text-gray-900 select-none">Financer</span>
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+      <div className="bg-white shadow-lg rounded-xl p-4 sm:p-6 lg:p-8 w-full max-w-md">
+        <div className="flex flex-col items-center mb-4 sm:mb-6">
+          <span className="text-3xl sm:text-4xl mb-2"><svg width="40" height="40" fill="none" viewBox="0 0 24 24"><rect width="20" height="20" x="2" y="2" rx="6" fill="#111"/><path d="M8 12h8M8 16h4" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg></span>
+          <span className="text-2xl sm:text-3xl font-bold text-gray-900 select-none">Financer</span>
         </div>
-        <h2 className="text-2xl font-bold mb-6 text-gray-900">Bem-vindo de volta</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-900">Bem-vindo de volta</h2>
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Seu email</label>
             <input
@@ -66,15 +66,15 @@ const LoginPage: React.FC = () => {
           </div>
           <button
             type="submit"
-            className="w-full px-8 py-4 bg-[#f1f3fe] text-[#6366f1] text-xl font-bold rounded-xl shadow hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-6 sm:px-8 py-3 sm:py-4 bg-[#f1f3fe] text-[#6366f1] text-lg sm:text-xl font-bold rounded-xl shadow hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={loading}
           >
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
-        <div className="mt-4 flex justify-between items-center">
-          <span className="text-sm text-gray-500">Não tem uma conta?</span>
-          <Link to="/signup" className="text-blue-600 hover:underline text-sm font-medium">Cadastre-se</Link>
+        <div className="mt-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+          <span className="text-sm text-gray-500 text-center sm:text-left">Não tem uma conta?</span>
+          <Link to="/signup" className="text-blue-600 hover:underline text-sm font-medium text-center sm:text-right">Cadastre-se</Link>
         </div>
       </div>
     </div>

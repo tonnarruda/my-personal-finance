@@ -3,6 +3,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 interface SidebarContextType {
   isCollapsed: boolean;
   toggleSidebar: () => void;
+  isMobileOpen: boolean;
+  setIsMobileOpen: (open: boolean) => void;
 }
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
@@ -26,6 +28,9 @@ export const SidebarProvider: React.FC<SidebarProviderProps> = ({ children }) =>
     return saved !== null ? JSON.parse(saved) : true; // true = colapsado por padrão
   });
 
+  // Estado para mobile sidebar
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
   // Salva o estado no localStorage sempre que mudar
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', JSON.stringify(isCollapsed));
@@ -36,7 +41,12 @@ export const SidebarProvider: React.FC<SidebarProviderProps> = ({ children }) =>
   };
 
   return (
-    <SidebarContext.Provider value={{ isCollapsed, toggleSidebar }}>
+    <SidebarContext.Provider value={{ 
+      isCollapsed, 
+      toggleSidebar, 
+      isMobileOpen, 
+      setIsMobileOpen 
+    }}>
       {children}
     </SidebarContext.Provider>
   );

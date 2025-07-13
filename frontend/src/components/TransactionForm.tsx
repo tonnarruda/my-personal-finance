@@ -274,19 +274,19 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
     <form onSubmit={handleSubmit} className="w-full space-y-3">
       {/* Header */}
       <div className="text-center mb-6">
-        <h2 className="text-3xl font-bold text-gray-900 mb-3">
+        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-3">
           {id ? 'Editar transação' : `Nova ${form.type === 'income' ? 'receita' : form.type === 'expense' ? 'despesa' : 'transferência'}`}
         </h2>
           {/* Tipo */}
-          <div className="flex gap-2 justify-center max-w-lg mx-auto">
-            <button type="button" onClick={() => handleChange('type', 'income')} className={`flex-1 px-0 py-2 rounded-lg border text-sm font-semibold transition-all ${form.type === 'income' ? 'bg-green-50 border-green-200 text-green-700 ring-2 ring-green-200' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Receita</button>
-            <button type="button" onClick={() => handleChange('type', 'expense')} className={`flex-1 px-0 py-2 rounded-lg border text-sm font-semibold transition-all ${form.type === 'expense' ? 'bg-red-50 border-red-400 text-red-600 ring-2 ring-red-200' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Despesa</button>
-            <button type="button" onClick={() => handleChange('type', 'transfer')} className={`flex-1 px-0 py-2 rounded-lg border text-sm font-semibold transition-all ${form.type === 'transfer' ? 'bg-gray-50 border-gray-400 text-gray-600 ring-2 ring-gray-200' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Transferência</button>
+          <div className="flex gap-1 sm:gap-2 justify-center max-w-lg mx-auto">
+            <button type="button" onClick={() => handleChange('type', 'income')} className={`flex-1 px-0 py-2 rounded-lg border text-xs sm:text-sm font-semibold transition-all ${form.type === 'income' ? 'bg-green-50 border-green-200 text-green-700 ring-2 ring-green-200' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Receita</button>
+            <button type="button" onClick={() => handleChange('type', 'expense')} className={`flex-1 px-0 py-2 rounded-lg border text-xs sm:text-sm font-semibold transition-all ${form.type === 'expense' ? 'bg-red-50 border-red-400 text-red-600 ring-2 ring-red-200' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Despesa</button>
+            <button type="button" onClick={() => handleChange('type', 'transfer')} className={`flex-1 px-0 py-2 rounded-lg border text-xs sm:text-sm font-semibold transition-all ${form.type === 'transfer' ? 'bg-gray-50 border-gray-400 text-gray-600 ring-2 ring-gray-200' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Transferência</button>
           </div>
         </div>
         {/* Primeira linha: Valor, Data, Competência e Status */}
-        <div className="grid grid-cols-7 gap-3">
-          <div className="col-span-2">
+        <div className="grid grid-cols-1 sm:grid-cols-7 gap-3">
+          <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Valor</label>
             <CurrencyInput
               value={form.amount}
@@ -297,7 +297,7 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
             />
             {errors.amount && <span className="text-xs text-red-500">{errors.amount}</span>}
           </div>
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
             <DateInput
               value={form.due_date}
@@ -308,7 +308,7 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
             />
             {errors.due_date && <span className="text-xs text-red-500">{errors.due_date}</span>}
           </div>
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Competência</label>
             <DateInput
               value={form.competence_date}
@@ -319,7 +319,7 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
             />
             {errors.competence_date && <span className="text-xs text-red-500">{errors.competence_date}</span>}
           </div>
-          <div className="col-span-1 flex flex-col items-center justify-center">
+          <div className="sm:col-span-1 flex flex-col items-center justify-center">
             <label className="block text-sm font-medium text-gray-700 mb-1 text-center">
               {isPaid ? 'Pago' : 'Não pago'}
             </label>
@@ -341,7 +341,7 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
         </div>
 
         {/* Terceira linha: Conta e Categoria */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               {form.type === 'transfer' ? 'Conta origem' : 'Conta/Cartão'}

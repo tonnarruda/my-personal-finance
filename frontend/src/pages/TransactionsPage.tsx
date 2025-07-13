@@ -744,42 +744,45 @@ const TransactionsPage: React.FC = () => {
     <Layout>
       {/* Bloco fixo no topo, alinhado ao conteúdo principal */}
       <div
-        className={`fixed top-0 bg-white shadow z-50 px-4 sm:px-6 lg:px-8 pt-8 pb-4 flex flex-col transition-all duration-300 ${
-          isCollapsed 
-            ? 'left-20 w-[calc(100vw-5rem)]' 
-            : 'left-64 w-[calc(100vw-16rem)]'
-        }`}
+        className={[
+          'fixed top-0 bg-white shadow z-50 px-4 sm:px-6 lg:px-8 pt-8 pb-4 flex flex-col transition-all duration-300',
+          'w-screen left-0',
+          isCollapsed
+            ? 'lg:left-20 lg:w-[calc(100vw-5rem)]'
+            : 'lg:left-64 lg:w-[calc(100vw-16rem)]',
+          'xl:left-64 xl:w-[calc(100vw-16rem)]'
+        ].join(' ')}
         style={{ minHeight: 200 }}
       >
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-4xl font-extrabold text-gray-900">Transações</h1>
-            <p className="mt-2 text-lg text-gray-600">Gerencie suas transações financeiras</p>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900">Transações</h1>
+            <p className="mt-2 text-sm sm:text-lg text-gray-600">Gerencie suas transações financeiras</p>
           </div>
           <button
             onClick={handleOpenForm}
-            className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
+            className="px-4 sm:px-6 py-2 sm:py-3 rounded-xl text-sm sm:text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
           >
             + Nova Transação
           </button>
         </div>
         {/* Tabs de currency */}
-        <div className="flex gap-2 mb-4">
+        <div className="flex gap-1 sm:gap-2 mb-4 overflow-x-auto">
           {currencies.map(cur => (
             <button
               key={cur}
               onClick={() => setSelectedCurrency(cur)}
-              className={`px-6 py-2 rounded-xl font-semibold text-base transition-colors border ${selectedCurrency === cur ? 'bg-indigo-50 text-indigo-700 border-indigo-400' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+              className={`px-3 sm:px-6 py-2 rounded-xl font-semibold text-sm sm:text-base transition-colors border flex-shrink-0 ${selectedCurrency === cur ? 'bg-indigo-50 text-indigo-700 border-indigo-400' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
             >
               {cur}
             </button>
           ))}
         </div>
         {/* Linha com filtros e seletor de mês */}
-        <div className="flex items-center justify-between gap-6 w-full mb-2">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-6 w-full mb-2">
           {/* Filtros à esquerda */}
-          <div className="flex gap-4 items-end">
-            <div>
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
+            <div className="w-full sm:w-auto">
               <label className="block text-sm font-medium text-gray-700 mb-1">Banco</label>
               <Select
                 value={selectedBank}
@@ -788,10 +791,10 @@ const TransactionsPage: React.FC = () => {
                   { value: '', label: 'Todos' },
                   ...(accountsByCurrency[selectedCurrency]?.sort((a, b) => a.name.localeCompare(b.name)).map(acc => ({ value: acc.id, label: acc.name })) || [])
                 ]}
-                className="min-w-[200px]"
+                className="w-full sm:min-w-[200px]"
               />
             </div>
-            <div>
+            <div className="w-full sm:w-auto">
               <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
               <CategorySelect
                 value={selectedCategory}
@@ -800,20 +803,20 @@ const TransactionsPage: React.FC = () => {
                   { value: '', label: 'Todas' },
                   ...getCategoryOptions()
                 ]}
-                className="min-w-[200px]"
+                className="w-full sm:min-w-[200px]"
               />
             </div>
           </div>
 
           {/* Seletor de mês no centro */}
-          <div className="flex items-center gap-4 select-none relative">
+          <div className="flex items-center justify-center gap-2 sm:gap-4 select-none relative">
             <button
-              className="p-2 rounded-full hover:bg-indigo-100 active:scale-90 transition group shadow-sm"
+              className="p-1 sm:p-2 rounded-full hover:bg-indigo-100 active:scale-90 transition group shadow-sm"
               onClick={handlePrevMonth}
               aria-label="Mês anterior"
               title="Mês anterior"
             >
-              <svg className="w-8 h-8 text-gray-400 group-hover:text-indigo-600 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400 group-hover:text-indigo-600 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
@@ -821,17 +824,18 @@ const TransactionsPage: React.FC = () => {
           {/* Botão principal do mês com dropdown */}
           <div className="relative">
             <button
-              className="px-8 py-2 rounded-2xl bg-gradient-to-r from-indigo-50 via-white to-indigo-50 shadow-lg border border-indigo-100 text-2xl font-extrabold text-gray-900 tracking-wide transition-all duration-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 flex items-center gap-2"
-              style={{ minWidth: 280, textAlign: 'center', letterSpacing: '0.04em' }}
+              className="px-4 sm:px-6 lg:px-8 py-2 rounded-2xl bg-gradient-to-r from-indigo-50 via-white to-indigo-50 shadow-lg border border-indigo-100 text-lg sm:text-xl lg:text-2xl font-extrabold text-gray-900 tracking-wide transition-all duration-300 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 flex items-center gap-2"
+              style={{ minWidth: 'auto', textAlign: 'center', letterSpacing: '0.04em' }}
               onClick={() => setShowMonthDropdown(!showMonthDropdown)}
             >
-              <span className="inline-flex items-center gap-2">
-                <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <span className="inline-flex items-center gap-1 sm:gap-2">
+                <svg className="w-4 h-4 sm:w-6 sm:h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2z" />
                 </svg>
-                {getDisplayPeriod()}
+                <span className="hidden sm:inline">{getDisplayPeriod()}</span>
+                <span className="sm:hidden">{getDisplayPeriod().split(' ')[0]}</span>
               </span>
-              <svg className={`w-4 h-4 text-indigo-400 transition-transform ${showMonthDropdown ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className={`w-3 h-3 sm:w-4 sm:h-4 text-indigo-400 transition-transform ${showMonthDropdown ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
@@ -926,19 +930,19 @@ const TransactionsPage: React.FC = () => {
           </div>
           
             <button
-              className="p-2 rounded-full hover:bg-indigo-100 active:scale-90 transition group shadow-sm"
+              className="p-1 sm:p-2 rounded-full hover:bg-indigo-100 active:scale-90 transition group shadow-sm"
               onClick={handleNextMonth}
               aria-label="Próximo mês"
               title="Próximo mês"
             >
-              <svg className="w-8 h-8 text-gray-400 group-hover:text-indigo-600 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400 group-hover:text-indigo-600 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
           </div>
 
           {/* Saldo anterior à direita */}
-          <div className="text-base text-gray-700 font-medium">
+          <div className="text-sm sm:text-base text-gray-700 font-medium text-center lg:text-right">
             Saldo anterior: <span className="font-bold">
               {saldoAnterior.toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency })}
             </span>
@@ -946,229 +950,231 @@ const TransactionsPage: React.FC = () => {
         </div>
       </div>
       {/* Espaço para não sobrepor o conteúdo */}
-      <div className="h-[230px]"></div>
+      <div className="h-[230px] sm:h-[200px] lg:h-[230px]"></div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Tabela de transações agrupada por data */}
-        <div className="bg-white rounded-2xl shadow mt-6">
+        <div className="bg-white rounded-2xl shadow mt-6 overflow-x-auto">
           {sortedDates.length === 0 && (
             <div className="text-center py-6 text-gray-400">Nenhuma transação encontrada.</div>
           )}
           {sortedDates.map(dateKey => (
             <div key={dateKey} className="mb-8">
-              <div className="flex items-center justify-between bg-gray-50 rounded-t-2xl px-8 py-4">
-                <span className="text-xl font-bold text-gray-900">{dateKey}</span>
-                <span className="text-base text-gray-700 font-medium">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-gray-50 rounded-t-2xl px-4 sm:px-8 py-4 gap-2">
+                <span className="text-lg sm:text-xl font-bold text-gray-900">{dateKey}</span>
+                <span className="text-sm sm:text-base text-gray-700 font-medium">
                   Saldo do dia: <span className="font-bold">
                     {saldoPorDia[dateKey].toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency })}
                   </span>
                 </span>
               </div>
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="text-gray-500 text-sm">
-                    <th className="font-semibold px-4 py-3 text-left min-w-[220px] max-w-[320px] w-1/3">DESCRIÇÃO</th>
-                    <th className="font-semibold px-4 py-3 text-left">DATA</th>
-                    <th className="font-semibold px-4 py-3 text-left">COMPETÊNCIA</th>
-                    <th className="font-semibold px-4 py-3 text-left">STATUS</th>
-                    <th className="font-semibold px-4 py-3 text-right">VALOR</th>
-                    <th className="font-semibold px-4 py-3 text-center">AÇÕES</th>
-                  </tr>
-                </thead>
-                <tbody className="text-gray-900 text-base divide-y divide-gray-100">
-                  {groupedByDate[dateKey].map(t => {
-                    const acc = accounts.find(a => a.id === t.account_id);
-                    // Função para decidir cor do texto
-                    return (
-                      <tr key={t.id} className="hover:bg-gray-50 transition">
-                        <td className="px-4 py-3 align-middle text-left min-w-[220px] max-w-[320px] w-1/3 truncate">
-                          <div className="flex flex-col gap-1">
-                            <span className="font-medium truncate">{t.description}</span>
-                            <div className="flex gap-2 mt-1 flex-wrap">
-                              {isTransferTransaction(t) ? (
-                                <>
-                                                                     {/* Conta origem */}
-                                   {(() => {
-                                     const relatedTransactions = transactions.filter(tx => 
-                                       tx.transfer_id === t.transfer_id && isTransferTransaction(tx)
-                                     );
-                                     const originTransaction = relatedTransactions.find(tx => tx.type === 'expense');
-                                     const originAccount = originTransaction ? accounts.find(acc => acc.id === originTransaction.account_id) : null;
-                                     
-                                     if (originAccount) {
-                                       return (
-                                         <span
-                                           className={`text-xs font-semibold rounded-full px-3 py-1 border`}
-                                           style={{
-                                             color: originAccount.color || '#facc15',
-                                             background: hexToRgba(originAccount.color || '#facc15', 0.10),
-                                             borderColor: hexToRgba(originAccount.color || '#facc15', 0.30),
-                                           }}
-                                         >
-                                           {originAccount.name}
-                                         </span>
-                                       );
-                                     }
-                                     return null;
-                                   })()}
-                                   
-                                   {/* Setinha indicando direção da transferência */}
-                                   <span className="text-xs text-gray-500 flex items-center px-1">
-                                     →
-                                   </span>
-                                   
-                                   {/* Conta destino */}
-                                   {(() => {
-                                     const relatedTransactions = transactions.filter(tx => 
-                                       tx.transfer_id === t.transfer_id && isTransferTransaction(tx)
-                                     );
-                                     const destinationTransaction = relatedTransactions.find(tx => tx.type === 'income');
-                                     const destinationAccount = destinationTransaction ? accounts.find(acc => acc.id === destinationTransaction.account_id) : null;
-                                     
-                                     if (destinationAccount) {
-                                       return (
-                                         <span
-                                           className={`text-xs font-semibold rounded-full px-3 py-1 border`}
-                                           style={{
-                                             color: destinationAccount.color || '#facc15',
-                                             background: hexToRgba(destinationAccount.color || '#facc15', 0.10),
-                                             borderColor: hexToRgba(destinationAccount.color || '#facc15', 0.30),
-                                           }}
-                                         >
-                                           {destinationAccount.name}
-                                         </span>
-                                       );
-                                     }
-                                     return null;
-                                   })()}
-                                  
-                                  {/* Tag da categoria Transferência */}
-                                  <span
-                                    className={`text-xs font-semibold rounded-full px-3 py-1 border`}
-                                    style={{
-                                      color: getCategoryColor(t),
-                                      background: hexToRgba(getCategoryColor(t), 0.10),
-                                      borderColor: hexToRgba(getCategoryColor(t), 0.30),
-                                    }}
-                                  >
-                                    {getCategoryDisplayName(t)}
-                                  </span>
-                                </>
-                              ) : (
-                                <>
-                                  {/* Tag da conta normal */}
-                                  <span
-                                    className={`text-xs font-semibold rounded-full px-3 py-1 border`}
-                                    style={{
-                                      color: acc?.color || '#facc15',
-                                      background: hexToRgba(acc?.color || '#facc15', 0.10),
-                                      borderColor: hexToRgba(acc?.color || '#facc15', 0.30),
-                                    }}
-                                  >
-                                    {acc?.name || '-'}
-                                  </span>
-                                  
-                                  {/* Tag da categoria normal */}
-                                  <span
-                                    className={`text-xs font-semibold rounded-full px-3 py-1 border`}
-                                    style={{
-                                      color: getCategoryColor(t),
-                                      background: hexToRgba(getCategoryColor(t), 0.10),
-                                      borderColor: hexToRgba(getCategoryColor(t), 0.30),
-                                    }}
-                                  >
-                                    {getCategoryDisplayName(t)}
-                                  </span>
-                                </>
-                              )}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left min-w-[800px]">
+                  <thead>
+                    <tr className="text-gray-500 text-xs sm:text-sm">
+                      <th className="font-semibold px-2 sm:px-4 py-3 text-left min-w-[200px] sm:min-w-[220px] max-w-[280px] sm:max-w-[320px] w-1/3">DESCRIÇÃO</th>
+                      <th className="font-semibold px-2 sm:px-4 py-3 text-left hidden sm:table-cell">DATA</th>
+                      <th className="font-semibold px-2 sm:px-4 py-3 text-left hidden lg:table-cell">COMPETÊNCIA</th>
+                      <th className="font-semibold px-2 sm:px-4 py-3 text-left">STATUS</th>
+                      <th className="font-semibold px-2 sm:px-4 py-3 text-right">VALOR</th>
+                      <th className="font-semibold px-2 sm:px-4 py-3 text-center">AÇÕES</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-gray-900 text-base divide-y divide-gray-100">
+                    {groupedByDate[dateKey].map(t => {
+                      const acc = accounts.find(a => a.id === t.account_id);
+                      return (
+                        <tr key={t.id} className="hover:bg-gray-50 transition">
+                          <td className="px-2 sm:px-4 py-3 align-middle text-left min-w-[180px] sm:min-w-[220px] max-w-[280px] sm:max-w-[320px] w-1/3 truncate">
+                            <div className="flex flex-col gap-1">
+                              <span className="font-medium truncate">{t.description}</span>
+                              <div className="flex gap-2 mt-1 flex-wrap">
+                                {isTransferTransaction(t) ? (
+                                  <>
+                                    {/* Conta origem */}
+                                    {(() => {
+                                      const relatedTransactions = transactions.filter(tx => 
+                                        tx.transfer_id === t.transfer_id && isTransferTransaction(tx)
+                                      );
+                                      const originTransaction = relatedTransactions.find(tx => tx.type === 'expense');
+                                      const originAccount = originTransaction ? accounts.find(acc => acc.id === originTransaction.account_id) : null;
+                                      
+                                      if (originAccount) {
+                                        return (
+                                          <span
+                                            className={`text-xs font-semibold rounded-full px-3 py-1 border`}
+                                            style={{
+                                              color: originAccount.color || '#facc15',
+                                              background: hexToRgba(originAccount.color || '#facc15', 0.10),
+                                              borderColor: hexToRgba(originAccount.color || '#facc15', 0.30),
+                                            }}
+                                          >
+                                            {originAccount.name}
+                                          </span>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                    
+                                    {/* Setinha indicando direção da transferência */}
+                                    <span className="text-xs text-gray-500 flex items-center px-1">
+                                      →
+                                    </span>
+                                    
+                                    {/* Conta destino */}
+                                    {(() => {
+                                      const relatedTransactions = transactions.filter(tx => 
+                                        tx.transfer_id === t.transfer_id && isTransferTransaction(tx)
+                                      );
+                                      const destinationTransaction = relatedTransactions.find(tx => tx.type === 'income');
+                                      const destinationAccount = destinationTransaction ? accounts.find(acc => acc.id === destinationTransaction.account_id) : null;
+                                      
+                                      if (destinationAccount) {
+                                        return (
+                                          <span
+                                            className={`text-xs font-semibold rounded-full px-3 py-1 border`}
+                                            style={{
+                                              color: destinationAccount.color || '#facc15',
+                                              background: hexToRgba(destinationAccount.color || '#facc15', 0.10),
+                                              borderColor: hexToRgba(destinationAccount.color || '#facc15', 0.30),
+                                            }}
+                                          >
+                                            {destinationAccount.name}
+                                          </span>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                    
+                                    {/* Tag da categoria Transferência */}
+                                    <span
+                                      className={`text-xs font-semibold rounded-full px-3 py-1 border`}
+                                      style={{
+                                        color: getCategoryColor(t),
+                                        background: hexToRgba(getCategoryColor(t), 0.10),
+                                        borderColor: hexToRgba(getCategoryColor(t), 0.30),
+                                      }}
+                                    >
+                                      {getCategoryDisplayName(t)}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <>
+                                    {/* Tag da conta normal */}
+                                    <span
+                                      className={`text-xs font-semibold rounded-full px-3 py-1 border`}
+                                      style={{
+                                        color: acc?.color || '#facc15',
+                                        background: hexToRgba(acc?.color || '#facc15', 0.10),
+                                        borderColor: hexToRgba(acc?.color || '#facc15', 0.30),
+                                      }}
+                                    >
+                                      {acc?.name || '-'}
+                                    </span>
+                                    
+                                    {/* Tag da categoria normal */}
+                                    <span
+                                      className={`text-xs font-semibold rounded-full px-3 py-1 border`}
+                                      style={{
+                                        color: getCategoryColor(t),
+                                        background: hexToRgba(getCategoryColor(t), 0.10),
+                                        borderColor: hexToRgba(getCategoryColor(t), 0.30),
+                                      }}
+                                    >
+                                      {getCategoryDisplayName(t)}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 align-middle text-left">{formatDateBR(t.due_date)}</td>
-                        <td className="px-4 py-3 align-middle text-left">{formatCompetenceBR(t.competence_date)}</td>
-                        <td className="px-4 py-3 align-middle text-left">
-                          {(() => {
-                            const status = getTransactionStatus(t);
-                            return (
-                              <span className={`text-xs font-semibold rounded px-2 py-0.5 ${status.className}`}>
-                                {status.text}
-                              </span>
-                            );
-                          })()}
-                        </td>
-                        <td className="px-4 py-3 align-middle text-right">
-                          <span className={`font-bold flex items-center gap-1 justify-end ${
-                            // Se é transferência e está mostrando todas as contas, cor neutra (preta)
-                            isTransferTransaction(t) && selectedBank === '' 
-                              ? 'text-gray-900' 
-                              : t.type === 'income' ? 'text-green-600' : 'text-red-600'
-                          }`}> 
-                            {t.amount.toLocaleString('pt-BR', { 
-                              style: 'currency', 
-                              currency: acc?.currency || selectedCurrency 
-                            })}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 align-middle text-center">
-                          {isTransferTransaction(t) ? (
-                            <button className="inline-flex items-center p-1 text-gray-400 cursor-not-allowed rounded" title="Transferências não podem ser editadas" disabled>
-                              <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M4 20h4.586a1 1 0 0 0 .707-.293l9.414-9.414a2 2 0 0 0 0-2.828l-2.172-2.172a2 2 0 0 0-2.828 0L4.293 15.293A1 1 0 0 0 4 16v4z" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          </td>
+                          <td className="px-2 sm:px-4 py-3 align-middle text-left hidden sm:table-cell">{formatDateBR(t.due_date)}</td>
+                          <td className="px-2 sm:px-4 py-3 align-middle text-left hidden lg:table-cell">{formatCompetenceBR(t.competence_date)}</td>
+                          <td className="px-2 sm:px-4 py-3 align-middle text-left">
+                            {(() => {
+                              const status = getTransactionStatus(t);
+                              return (
+                                <span className={`text-xs font-semibold rounded px-2 py-0.5 ${status.className}`}>
+                                  {status.text}
+                                </span>
+                              );
+                            })()}
+                          </td>
+                          <td className="px-2 sm:px-4 py-3 align-middle text-right">
+                            <span className={`font-bold flex items-center gap-1 justify-end ${
+                              isTransferTransaction(t) && selectedBank === '' 
+                                ? 'text-gray-900' 
+                                : t.type === 'income' ? 'text-green-600' : 'text-red-600'
+                            }`}> 
+                              {t.amount.toLocaleString('pt-BR', { 
+                                style: 'currency', 
+                                currency: acc?.currency || selectedCurrency 
+                              })}
+                            </span>
+                          </td>
+                          <td className="px-2 sm:px-4 py-3 align-middle text-center">
+                            {isTransferTransaction(t) ? (
+                              <button className="inline-flex items-center p-1 text-gray-400 cursor-not-allowed rounded" title="Transferências não podem ser editadas" disabled>
+                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M4 20h4.586a1 1 0 0 0 .707-.293l9.414-9.414a2 2 0 0 0 0-2.828l-2.172-2.172a2 2 0 0 0-2.828 0L4.293 15.293A1 1 0 0 0 4 16v4z" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                              </button>
+                            ) : (
+                              <button className="inline-flex items-center p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar" onClick={() => handleEdit(t)}>
+                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M4 20h4.586a1 1 0 0 0 .707-.293l9.414-9.414a2 2 0 0 0 0-2.828l-2.172-2.172a2 2 0 0 0-2.828 0L4.293 15.293A1 1 0 0 0 4 16v4z" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                              </button>
+                            )}
+                            <button className="inline-flex items-center p-1 text-red-600 hover:bg-red-50 rounded ml-2" title="Excluir" onClick={() => handleDelete(t.id!)}>
+                              <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3m-7 0h10" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                             </button>
-                          ) : (
-                            <button className="inline-flex items-center p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar" onClick={() => handleEdit(t)}>
-                              <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M4 20h4.586a1 1 0 0 0 .707-.293l9.414-9.414a2 2 0 0 0 0-2.828l-2.172-2.172a2 2 0 0 0-2.828 0L4.293 15.293A1 1 0 0 0 4 16v4z" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                            </button>
-                          )}
-                          <button className="inline-flex items-center p-1 text-red-600 hover:bg-red-50 rounded ml-2" title="Excluir" onClick={() => handleDelete(t.id!)}>
-                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3m-7 0h10" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ))}
         </div>
-        {/* Modal de formulário de transação */}
-        {showForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-6xl max-h-[90vh] overflow-y-auto relative">
-              <button
-                onClick={handleCloseForm}
-                className="absolute top-6 right-8 text-gray-400 hover:text-gray-600 text-3xl"
-                title="Fechar"
-              >
-                &times;
-              </button>
-              <TransactionForm onSubmit={handleSubmitForm} onCancel={handleCloseForm} currency={selectedCurrency} {...(editingTransaction ? { ...editingTransaction } : {})} />
-            </div>
-          </div>
-        )}
-        {/* Modal de confirmação de exclusão de transação */}
-        {transactionToDelete && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
-              <h2 className="text-xl font-bold mb-4">Excluir transação</h2>
-              <p className="mb-6">Tem certeza que deseja excluir a transação <span className="font-semibold">{transactionToDelete.description}</span>?</p>
-              <div className="flex justify-center gap-4">
-                <button
-                  onClick={cancelDeleteTransaction}
-                  className="px-6 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={confirmDeleteTransaction}
-                  className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
-                >
-                  Excluir
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+      
+      {/* Modal de formulário de transação */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-6xl max-h-[90vh] overflow-y-auto relative">
+            <button
+              onClick={handleCloseForm}
+              className="absolute top-6 right-8 text-gray-400 hover:text-gray-600 text-3xl"
+              title="Fechar"
+            >
+              &times;
+            </button>
+            <TransactionForm onSubmit={handleSubmitForm} onCancel={handleCloseForm} currency={selectedCurrency} {...(editingTransaction ? { ...editingTransaction } : {})} />
+          </div>
+        </div>
+      )}
+      
+      {/* Modal de confirmação de exclusão de transação */}
+      {transactionToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
+            <h2 className="text-xl font-bold mb-4">Excluir transação</h2>
+            <p className="mb-6">Tem certeza que deseja excluir a transação <span className="font-semibold">{transactionToDelete.description}</span>?</p>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={cancelDeleteTransaction}
+                className="px-6 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDeleteTransaction}
+                className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };
