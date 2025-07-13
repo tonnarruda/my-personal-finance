@@ -1,6 +1,7 @@
 {
   "short_name": "My Finance",
   "name": "My Personal Finance",
+  "description": "Sistema de gerenciamento financeiro pessoal",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,11 +21,14 @@
       "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
   "theme_color": "#1976d2",
   "background_color": "#ffffff",
   "orientation": "portrait",
   "scope": "/",
-  "lang": "pt-BR"
+  "lang": "pt-BR",
+  "categories": ["finance", "productivity"],
+  "screenshots": [],
+  "prefer_related_applications": false
 } 
