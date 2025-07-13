@@ -22,7 +22,9 @@ export function getAuthToken() {
 }
 
 export function isAuthenticated() {
-  return !!getUser() && !!getAuthToken();
+  const user = getUser();
+  const token = getAuthToken();
+  return !!(user && token);
 }
 
 export function clearAuth() {

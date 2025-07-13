@@ -43,8 +43,19 @@ api.interceptors.request.use(
     const user = getUser();
     const token = getAuthToken();
     
-    if (!user && !config.url?.includes('/login') && !config.url?.includes('/signup')) {
-      console.log('Usuário não autenticado, redirecionando para login');
+    console.log(`[API] Requisição para: ${config.url}`);
+    console.log(`[API] User: ${user ? 'presente' : 'ausente'}`);
+    console.log(`[API] Token: ${token ? 'presente' : 'ausente'}`);
+    
+    // Não bloqueia requisições de login/signup
+    if (config.url?.includes('/login') || config.url?.includes('/signup')) {
+      console.log(`[API] Permitindo requisição de auth: ${config.url}`);
+      return config;
+    }
+    
+    // Para outras requisições, verifica se está autenticado
+    if (!user || !token) {
+      console.log('[API] Usuário não autenticado, redirecionando para login');
       window.location.href = '/login';
       return Promise.reject(new Error('Usuário não autenticado'));
     }
@@ -52,6 +63,7 @@ api.interceptors.request.use(
     // Adiciona o token no header Authorization se existir
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log(`[API] Token adicionado ao header para: ${config.url}`);
     }
     
     return config;
