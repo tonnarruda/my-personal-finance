@@ -347,8 +347,8 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
               {form.type === 'transfer' ? 'Conta origem' : 'Conta/Cartão'}
             </label>
             <AccountSelect
-              values={form.account_id ? [form.account_id] : []}
-              onChange={(values) => handleChange('account_id', values[0] || '')}
+              value={form.account_id}
+              onChange={(value) => handleChange('account_id', value)}
               options={[
                 { value: '', label: 'Selecione um banco' },
                 ...accounts
@@ -366,8 +366,8 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
             </label>
             {form.type === 'transfer' ? (
               <AccountSelect
-                values={form.category_id ? [form.category_id] : []}
-                onChange={(values) => handleChange('category_id', values[0] || '')}
+                value={form.category_id}
+                onChange={(value) => handleChange('category_id', value)}
                 options={[
                   { value: '', label: 'Selecione um banco' },
                   ...accounts

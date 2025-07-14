@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import TransactionForm from '../components/TransactionForm';
-import AccountSelect from '../components/AccountSelect';
+import Select from '../components/Select';
 import CategorySelect from '../components/CategorySelect';
 import DateInput from '../components/DateInput';
-import Pagination from '../components/Pagination';
 import { accountService, transactionService, categoryService } from '../services/api';
 import { Transaction } from '../types/transaction';
 import { getUser } from '../services/auth';
@@ -28,8 +27,8 @@ function hexToRgba(hex: string, alpha: number) {
 }
 
 const TransactionsPage: React.FC = () => {
-  // Garanta que o valor inicial dos filtros seja []
-  const [selectedBanks, setSelectedBanks] = useState<string[]>([]);
+  // Garanta que o valor inicial dos filtros seja ''
+  const [selectedBank, setSelectedBank] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState('BRL');
@@ -51,22 +50,6 @@ const TransactionsPage: React.FC = () => {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const { isCollapsed } = useSidebar();
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(() => {
-    const savedPageSize = localStorage.getItem('transactionsPageSize');
-    return savedPageSize ? Number(savedPageSize) : 10;
-  });
-
-  // Save pageSize to localStorage when it changes
-  useEffect(() => {
-    localStorage.setItem('transactionsPageSize', pageSize.toString());
-  }, [pageSize]);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedBanks, selectedCategory, selectedCurrency, selectedMonthYear, isCustomDateRange, customStartDate, customEndDate]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -278,50 +261,34 @@ const TransactionsPage: React.FC = () => {
     return false;
   }
 
-  // Atualizar a lógica de filtragem de transações
-  const filteredTransactions = transactions.filter(t => {
-    // Filtrar por moeda
+  // Filtrar transações por moeda, banco e categoria
+  const transactionsForCurrency = transactions.filter(t => {
     const acc = accounts.find(a => a.id === t.account_id);
-    if (acc?.currency !== selectedCurrency) return false;
+    const bankMatch = selectedBank === '' || t.account_id === selectedBank;
+    const categoryMatch = transactionMatchesCategory(t, selectedCategory);
+    const currencyMatch = acc?.currency === selectedCurrency;
 
-    // Filtrar por bancos selecionados (se nenhum banco selecionado, mostrar todos)
-    if (selectedBanks.length > 0) {
-      if (isTransferTransaction(t)) {
-        // Para transferências, verificar se alguma das contas envolvidas está selecionada
-        const relatedTransactions = transactions.filter(tx => 
-          tx.transfer_id === t.transfer_id && isTransferTransaction(tx)
-        );
-        const accountIds = relatedTransactions.map(tx => tx.account_id);
-        if (!accountIds.some(id => selectedBanks.includes(id))) {
-          return false;
-        }
-      } else {
-        // Para transações normais, verificar se a conta está selecionada
-        if (!selectedBanks.includes(t.account_id)) {
-          return false;
-        }
-      }
-    }
-
-    // Filtrar por categoria
-    if (selectedCategory && !transactionMatchesCategory(t, selectedCategory)) return false;
-
-    // Filtrar por data
+    // Para range personalizado
     if (isCustomDateRange) {
       if (!customStartDate || !customEndDate) return false;
-      const txDate = parseDateString(t.due_date);
+      const transactionDate = parseDateString(t.competence_date);
       const startDate = parseDateString(customStartDate);
       const endDate = parseDateString(customEndDate);
-      if (!txDate || !startDate || !endDate) return false;
-      return txDate >= startDate && txDate <= endDate;
-    } else {
-      const { month, year } = extractMonthYear(t.due_date) || {};
-      return month === selectedMonthYear.month && year === selectedMonthYear.year;
+      if (!transactionDate || !startDate || !endDate) return false;
+      return currencyMatch && bankMatch && categoryMatch && 
+             transactionDate >= startDate && transactionDate <= endDate;
     }
+
+    // Para visualização mensal
+    const competence = parseDateString(t.competence_date);
+    const monthMatch = competence?.getMonth() === selectedMonthYear.month - 1;
+    const yearMatch = competence?.getFullYear() === selectedMonthYear.year;
+
+    return currencyMatch && bankMatch && categoryMatch && monthMatch && yearMatch;
   });
 
   // Remover duplicatas de transferências
-  const transactionsForCurrencySorted = filteredTransactions
+  const transactionsForCurrencySorted = transactionsForCurrency
     .filter((transaction, index, array) => {
       // Se não é transferência, manter
       if (!isTransferTransaction(transaction)) {
@@ -498,12 +465,12 @@ const TransactionsPage: React.FC = () => {
   };
 
   // Agrupar transações por data de lançamento (date)
-  const groupedByDate = filteredTransactions.reduce((acc, t) => {
+  const groupedByDate = transactionsForCurrencySorted.reduce((acc, t) => {
     const dateKey = formatDateBR(t.due_date); // ex: '05/07/2025'
     if (!acc[dateKey]) acc[dateKey] = [];
     acc[dateKey].push(t);
     return acc;
-  }, {} as Record<string, typeof filteredTransactions>);
+  }, {} as Record<string, typeof transactionsForCurrencySorted>);
 
   // Ordenar as datas
   const sortedDates = Object.keys(groupedByDate).sort((a, b) => {
@@ -513,19 +480,13 @@ const TransactionsPage: React.FC = () => {
     return da.getTime() - db.getTime();
   });
 
-  // Paginar as datas
-  const totalDates = sortedDates.length;
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginatedDates = sortedDates.slice(startIndex, endIndex);
-
   // Calcular saldo do dia para cada grupo
   function getSaldoDoDia(transactions: typeof transactionsForCurrencySorted) {
     return transactions.reduce((acc, t) => {
       if (t.is_paid) {
         // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
         // Se há filtro de conta específica, incluir transferências que afetam essa conta
-        if (isTransferTransaction(t) && selectedBanks.length === 0) {
+        if (isTransferTransaction(t) && selectedBank === '') {
           return acc;
         }
         return acc + (t.type === 'income' ? t.amount : -t.amount);
@@ -553,7 +514,7 @@ const TransactionsPage: React.FC = () => {
 
   const transacoesParaSaldoAnterior = allTransactionsWithoutDuplicates.filter(t => {
     const acc = accounts.find(a => a.id === t.account_id);
-    const bankMatch = selectedBanks.length === 0 || selectedBanks.includes(t.account_id);
+    const bankMatch = selectedBank === '' || t.account_id === selectedBank;
     const categoryMatch = transactionMatchesCategory(t, selectedCategory);
     const competence = parseDateString(t.competence_date);
     
@@ -585,7 +546,7 @@ const TransactionsPage: React.FC = () => {
   const saldoAnteriorCalc = transacoesParaSaldoAnterior.reduce((acc, t) => {
     // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
     // Se há filtro de conta específica, incluir transferências que afetam essa conta
-    if (isTransferTransaction(t) && selectedBanks.length === 0) {
+    if (isTransferTransaction(t) && selectedBank === '') {
       return acc;
     }
     return acc + (t.type === 'income' ? t.amount : -t.amount);
@@ -604,7 +565,7 @@ const TransactionsPage: React.FC = () => {
       if (t.is_paid) {
         // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
         // Se há filtro de conta específica, incluir transferências que afetam essa conta
-        if (isTransferTransaction(t) && selectedBanks.length === 0) {
+        if (isTransferTransaction(t) && selectedBank === '') {
           return acc;
         }
         return acc + (t.type === 'income' ? t.amount : -t.amount);
@@ -813,12 +774,13 @@ const TransactionsPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
               <div className="w-full sm:w-auto">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Banco</label>
-                <AccountSelect
-                  values={selectedBanks}
-                  onChange={(vals: string[]) => setSelectedBanks(vals)}
-                  options={accountsByCurrency[selectedCurrency]
-                    ?.sort((a, b) => a.name.localeCompare(b.name))
-                    .map(acc => ({ value: acc.id, label: acc.name })) || []}
+                <Select
+                  value={selectedBank}
+                  onChange={val => setSelectedBank(val)}
+                  options={[
+                    { value: '', label: 'Todos' },
+                    ...(accountsByCurrency[selectedCurrency]?.sort((a, b) => a.name.localeCompare(b.name)).map(acc => ({ value: acc.id, label: acc.name })) || [])
+                  ]}
                   className="w-full sm:min-w-[200px]"
                 />
               </div>
@@ -982,7 +944,7 @@ const TransactionsPage: React.FC = () => {
           {sortedDates.length === 0 && (
             <div className="text-center py-6 text-gray-400">Nenhuma transação encontrada.</div>
           )}
-          {paginatedDates.map(dateKey => (
+          {sortedDates.map(dateKey => (
             <div key={dateKey} className="mb-8">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-gray-50 rounded-t-2xl px-4 sm:px-8 py-4 gap-2">
                 <span className="text-lg sm:text-xl font-bold text-gray-900">{dateKey}</span>
@@ -1126,7 +1088,7 @@ const TransactionsPage: React.FC = () => {
                           </td>
                           <td className="px-2 sm:px-4 py-3 align-middle text-right">
                             <span className={`font-bold flex items-center gap-1 justify-end ${
-                              isTransferTransaction(t) && selectedBanks.length === 0 
+                              isTransferTransaction(t) && selectedBank === '' 
                                 ? 'text-gray-900' 
                                 : t.type === 'income' ? 'text-green-600' : 'text-red-600'
                             }`}> 
@@ -1158,17 +1120,6 @@ const TransactionsPage: React.FC = () => {
               </div>
             </div>
           ))}
-
-          {/* Pagination */}
-          {sortedDates.length > 0 && (
-            <Pagination
-              currentPage={currentPage}
-              totalItems={totalDates}
-              pageSize={pageSize}
-              onPageChange={setCurrentPage}
-              onPageSizeChange={setPageSize}
-            />
-          )}
         </div>
         
         {/* Modal de formulário de transação */}

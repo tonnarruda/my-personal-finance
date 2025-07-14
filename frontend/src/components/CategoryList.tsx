@@ -87,12 +87,12 @@ const CategoryList: React.FC<CategoryListProps> = ({
   );
 
   return (
-    <div className="space-y-6">
+    <div>
       {categories.map((categoryWithSubs) => (
-        <div key={categoryWithSubs.id}>
+        <div key={categoryWithSubs.id} className="mb-2">
           <CategoryItem category={categoryWithSubs} />
           {categoryWithSubs.subcategories && categoryWithSubs.subcategories.length > 0 && (
-            <div className="mt-4">
+            <div className="space-y-2">
               {categoryWithSubs.subcategories.map((subcategory) => (
                 <CategoryItem key={subcategory.id} category={subcategory} isSubcategory />
               ))}

@@ -6,8 +6,8 @@ interface AccountOption {
 }
 
 interface AccountSelectProps {
-  values: string[];
-  onChange: (values: string[]) => void;
+  value: string;
+  onChange: (value: string) => void;
   options: AccountOption[];
   placeholder?: string;
   className?: string;
@@ -16,10 +16,10 @@ interface AccountSelectProps {
 }
 
 const AccountSelect: React.FC<AccountSelectProps> = ({
-  values,
+  value,
   onChange,
   options,
-  placeholder = 'Selecione uma ou mais contas',
+  placeholder = 'Selecione uma conta',
   className = '',
   error = false,
   disabled = false
@@ -28,7 +28,7 @@ const AccountSelect: React.FC<AccountSelectProps> = ({
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const selectRef = useRef<HTMLDivElement>(null);
 
-  const selectedOptions = options.filter(option => values.includes(option.value));
+  const selectedOption = options.find(option => option.value === value);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -77,10 +77,8 @@ const AccountSelect: React.FC<AccountSelectProps> = ({
   };
 
   const handleOptionClick = (option: AccountOption) => {
-    const newValues = values.includes(option.value)
-      ? values.filter(v => v !== option.value)
-      : [...values, option.value];
-    onChange(newValues);
+    onChange(option.value);
+    setIsOpen(false);
     setHighlightedIndex(-1);
   };
 
@@ -89,12 +87,6 @@ const AccountSelect: React.FC<AccountSelectProps> = ({
       e.preventDefault();
       handleOptionClick(option);
     }
-  };
-
-  const getDisplayText = () => {
-    if (selectedOptions.length === 0) return placeholder;
-    if (selectedOptions.length === 1) return selectedOptions[0].label;
-    return `${selectedOptions.length} contas selecionadas`;
   };
 
   return (
@@ -117,8 +109,8 @@ const AccountSelect: React.FC<AccountSelectProps> = ({
         aria-labelledby="select-label"
       >
         <div className="flex items-center justify-between">
-          <span className={`${selectedOptions.length > 0 ? 'text-gray-900 font-medium' : 'text-gray-500'} flex items-center`}>
-            {getDisplayText()}
+          <span className={`${selectedOption ? 'text-gray-900 font-medium' : 'text-gray-500'} flex items-center`}>
+            {selectedOption ? selectedOption.label : placeholder}
           </span>
           <svg 
             className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
@@ -131,28 +123,6 @@ const AccountSelect: React.FC<AccountSelectProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </div>
-        {selectedOptions.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {selectedOptions.map(option => (
-              <span
-                key={option.value}
-                className="inline-flex items-center px-2 py-1 rounded-lg bg-blue-100 text-blue-800 text-sm"
-              >
-                {option.label}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleOptionClick(option);
-                  }}
-                  className="ml-1 hover:text-blue-600"
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
       </button>
 
       {isOpen && (
@@ -166,8 +136,8 @@ const AccountSelect: React.FC<AccountSelectProps> = ({
               <li
                 key={option.value}
                 className={`cursor-pointer transition-all duration-200 px-4 py-3 font-medium border-b border-gray-100 last:border-b-0 ${
-                  values.includes(option.value)
-                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700'
+                  option.value === value 
+                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border-l-3 border-blue-500'
                     : highlightedIndex === index 
                     ? 'bg-gradient-to-r from-gray-50 to-blue-50 text-gray-900'
                     : 'text-gray-800 hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50 hover:text-gray-900'
@@ -177,18 +147,10 @@ const AccountSelect: React.FC<AccountSelectProps> = ({
                 onMouseEnter={() => setHighlightedIndex(index)}
                 onMouseLeave={() => setHighlightedIndex(-1)}
                 role="option"
-                aria-selected={values.includes(option.value)}
+                aria-selected={option.value === value}
                 tabIndex={0}
               >
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={values.includes(option.value)}
-                    onChange={() => {}}
-                    className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 mr-3"
-                  />
-                  {option.label}
-                </div>
+                {option.label}
               </li>
             ))}
           </ul>
