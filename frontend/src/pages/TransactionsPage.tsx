@@ -4,6 +4,7 @@ import TransactionForm from '../components/TransactionForm';
 import AccountSelect from '../components/AccountSelect';
 import CategorySelect from '../components/CategorySelect';
 import DateInput from '../components/DateInput';
+import Pagination from '../components/Pagination';
 import { accountService, transactionService, categoryService } from '../services/api';
 import { Transaction } from '../types/transaction';
 import { getUser } from '../services/auth';
@@ -50,6 +51,22 @@ const TransactionsPage: React.FC = () => {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const { isCollapsed } = useSidebar();
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(() => {
+    const savedPageSize = localStorage.getItem('transactionsPageSize');
+    return savedPageSize ? Number(savedPageSize) : 10;
+  });
+
+  // Save pageSize to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('transactionsPageSize', pageSize.toString());
+  }, [pageSize]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedBanks, selectedCategory, selectedCurrency, selectedMonthYear, isCustomDateRange, customStartDate, customEndDate]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -481,12 +498,12 @@ const TransactionsPage: React.FC = () => {
   };
 
   // Agrupar transações por data de lançamento (date)
-  const groupedByDate = transactionsForCurrencySorted.reduce((acc, t) => {
+  const groupedByDate = filteredTransactions.reduce((acc, t) => {
     const dateKey = formatDateBR(t.due_date); // ex: '05/07/2025'
     if (!acc[dateKey]) acc[dateKey] = [];
     acc[dateKey].push(t);
     return acc;
-  }, {} as Record<string, typeof transactionsForCurrencySorted>);
+  }, {} as Record<string, typeof filteredTransactions>);
 
   // Ordenar as datas
   const sortedDates = Object.keys(groupedByDate).sort((a, b) => {
@@ -495,6 +512,12 @@ const TransactionsPage: React.FC = () => {
     if (!da || !db) return 0;
     return da.getTime() - db.getTime();
   });
+
+  // Paginar as datas
+  const totalDates = sortedDates.length;
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedDates = sortedDates.slice(startIndex, endIndex);
 
   // Calcular saldo do dia para cada grupo
   function getSaldoDoDia(transactions: typeof transactionsForCurrencySorted) {
@@ -959,7 +982,7 @@ const TransactionsPage: React.FC = () => {
           {sortedDates.length === 0 && (
             <div className="text-center py-6 text-gray-400">Nenhuma transação encontrada.</div>
           )}
-          {sortedDates.map(dateKey => (
+          {paginatedDates.map(dateKey => (
             <div key={dateKey} className="mb-8">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-gray-50 rounded-t-2xl px-4 sm:px-8 py-4 gap-2">
                 <span className="text-lg sm:text-xl font-bold text-gray-900">{dateKey}</span>
@@ -1135,6 +1158,17 @@ const TransactionsPage: React.FC = () => {
               </div>
             </div>
           ))}
+
+          {/* Pagination */}
+          {sortedDates.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalItems={totalDates}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          )}
         </div>
         
         {/* Modal de formulário de transação */}
