@@ -23,7 +23,6 @@ const TransactionListModal: React.FC<TransactionListModalProps> = ({
   const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
-    // Buscar todas as categorias quando o modal abrir
     if (isOpen) {
       const fetchCategories = async () => {
         try {
@@ -38,6 +37,23 @@ const TransactionListModal: React.FC<TransactionListModalProps> = ({
       fetchCategories();
     }
   }, [isOpen]);
+
+  // Adiciona listener para tecla ESC
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscKey);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscKey);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -60,12 +76,8 @@ const TransactionListModal: React.FC<TransactionListModalProps> = ({
 
   // Função para obter o nome da subcategoria
   const getSubcategoryName = (categoryId: string): string | null => {
-    // Procura em todas as categorias principais
     for (const mainCategory of categories) {
-      // Se é a categoria principal, retorna null
       if (mainCategory.id === categoryId) return null;
-      
-      // Procura nas subcategorias
       if (mainCategory.subcategories) {
         const subcategory = mainCategory.subcategories.find(sub => sub.id === categoryId);
         if (subcategory) return subcategory.name;
@@ -74,34 +86,32 @@ const TransactionListModal: React.FC<TransactionListModalProps> = ({
     return null;
   };
 
-  // Agrupa transações por data
-  const groupedTransactions = transactions.reduce((groups: { [date: string]: Transaction[] }, transaction) => {
-    const date = formatDate(transaction.competence_date || transaction.due_date);
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(transaction);
-    return groups;
-  }, {});
+  // Calcula o total das transações
+  const total = transactions.reduce((sum, tx) => sum + tx.amount, 0);
 
-  // Ordena as datas (mais recentes primeiro)
-  const sortedDates = Object.keys(groupedTransactions).sort((a, b) => {
-    const dateA = new Date(a.split('/').reverse().join('-'));
-    const dateB = new Date(b.split('/').reverse().join('-'));
-    return dateB.getTime() - dateA.getTime();
+  // Ordena as transações por data (mais antigas primeiro)
+  const sortedTransactions = [...transactions].sort((a, b) => {
+    const dateA = new Date((a.competence_date || a.due_date) ?? '');
+    const dateB = new Date((b.competence_date || b.due_date) ?? '');
+    return dateA.getTime() - dateB.getTime();
   });
 
   return (
     <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 ${!isCollapsed ? 'lg:pl-64' : 'lg:pl-20'}`}>
-      <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col relative">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">
-            Transações da categoria: {categoryName}
-          </h2>
+      <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col relative">
+        {/* Header com total */}
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 mb-1">
+              {categoryName}
+            </h2>
+            <div className="text-lg font-semibold text-gray-700">
+              Total: {formatCurrency(total)}
+            </div>
+          </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-3xl leading-none"
+            className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
             title="Fechar"
           >
             &times;
@@ -109,63 +119,56 @@ const TransactionListModal: React.FC<TransactionListModalProps> = ({
         </div>
 
         {/* Lista de transações */}
-        <div className="overflow-y-auto flex-1 -mx-8 px-8">
-          {sortedDates.map(date => (
-            <div key={date} className="mb-6">
-              {/* Data */}
-              <div className="sticky top-0 bg-white z-10 py-2 border-b border-gray-200 mb-4">
-                <h3 className="text-lg font-semibold text-gray-700">{date}</h3>
-              </div>
-
-              {/* Transações do dia */}
-              <div className="space-y-3">
-                {groupedTransactions[date].map(transaction => {
-                  const subcategoryName = getSubcategoryName(transaction.category_id);
-                  
-                  return (
-                    <div
-                      key={transaction.id}
-                      className="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 transition-colors"
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3">
-                            <div className="flex-1">
-                              <div className="text-base font-medium text-gray-900 truncate">
-                                {transaction.description}
-                              </div>
-                              {transaction.observation && (
-                                <div className="text-sm text-gray-500 truncate">
-                                  {transaction.observation}
-                                </div>
-                              )}
-                              {subcategoryName && (
-                                <div className="mt-1">
-                                  <span className="text-xs font-medium px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
-                                    {subcategoryName}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
+        <div className="overflow-y-auto flex-1 -mx-6 px-6">
+          <div className="space-y-1">
+            {sortedTransactions.map(transaction => {
+              const subcategoryName = getSubcategoryName(transaction.category_id);
+              const date = formatDate(transaction.competence_date || transaction.due_date);
+              
+              return (
+                <div
+                  key={transaction.id}
+                  className="hover:bg-gray-50 rounded-lg"
+                >
+                  <div className="flex items-center justify-between py-2 px-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="text-sm text-gray-500 whitespace-nowrap">
+                        {date}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900 truncate">
+                          {transaction.description}
+                          {subcategoryName && (
+                            <span className="ml-2 text-xs font-medium px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
+                              {subcategoryName}
+                            </span>
+                          )}
                         </div>
-                        <div className="text-right">
-                          <div className={`text-base font-semibold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatCurrency(transaction.amount)}
+                        {transaction.observation && (
+                          <div className="text-xs text-gray-500 truncate">
+                            {transaction.observation}
                           </div>
-                          <div className="text-sm text-gray-500">
-                            {transaction.is_paid ? 'Pago' : 'Pendente'}
-                          </div>
-                        </div>
+                        )}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+                    <div className="text-right ml-4 whitespace-nowrap">
+                      <div className={`text-sm font-medium ${
+                        transaction.is_paid 
+                          ? transaction.type === 'income' 
+                            ? 'text-green-600' 
+                            : 'text-red-600'
+                          : 'text-gray-500'
+                      }`}>
+                        {formatCurrency(transaction.amount)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
-          {sortedDates.length === 0 && (
+          {transactions.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               Nenhuma transação encontrada.
             </div>
