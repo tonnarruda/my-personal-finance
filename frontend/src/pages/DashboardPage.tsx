@@ -14,6 +14,7 @@ import AccountForm from '../components/AccountForm';
 import { useToast } from '../contexts/ToastContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import { CreateAccountRequest } from '../types/account';
+import ModernPieChart from '../components/ModernPieChart';
 
 const DashboardPage: React.FC = () => {
   const [nome, setNome] = useState('');
@@ -56,7 +57,13 @@ const DashboardPage: React.FC = () => {
   };
 
   // Atualizar dados mockados para serem por currency
-  interface CategoriaData { label: string; value: number; percent: number; color: string; }
+  interface CategoriaData { 
+    label: string; 
+    value: number; 
+    percent: number; 
+    color: string; 
+    transactions: Transaction[];
+  }
   interface CurrencyData {
     receitaMes: number;
     despesaMes: number;
@@ -215,7 +222,7 @@ const DashboardPage: React.FC = () => {
   // Agrupa receitas/despesas por categoria pai (excluindo transferências)
   function groupByCategory(type: 'income' | 'expense') {
     const txs = transactionsForCurrency.filter(tx => tx.type === type && tx.is_paid && !isTransferTransaction(tx));
-    const map: { [catId: string]: { label: string; value: number; color: string } } = {};
+    const map: { [catId: string]: { label: string; value: number; color: string; transactions: Transaction[] } } = {};
     txs.forEach(tx => {
       const parentCategory = getParentCategory(tx.category_id);
       if (!parentCategory) return;
@@ -225,10 +232,12 @@ const DashboardPage: React.FC = () => {
         map[parentCategory.id] = { 
           label: parentCategory.name, 
           value: 0, 
-          color: parentCategory.color 
+          color: parentCategory.color,
+          transactions: []
         };
       }
       map[parentCategory.id].value += tx.amount / 100;
+      map[parentCategory.id].transactions.push(tx);
     });
     // Calcula percentuais e ordena por valor (do maior para o menor)
     const total = Object.values(map).reduce((sum, c) => sum + c.value, 0) || 1;
@@ -601,99 +610,18 @@ const DashboardPage: React.FC = () => {
         {/* Cards de pizza por categoria filtrados pela currency */}
         <div className="w-full max-w-screen-xl px-0 mx-auto mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Despesas por categoria */}
-          <div className="bg-white rounded-2xl shadow p-8 flex flex-col min-w-0">
-            <div className="text-xl font-bold text-gray-900 mb-6">Despesas por categoria</div>
-            <div className="flex flex-col sm:flex-row items-center gap-8 flex-1">
-              <div className="flex-shrink-0 flex items-center justify-center mb-4 sm:mb-0">
-                {/* Gráfico donut SVG */}
-                <svg width="160" height="160" viewBox="0 0 36 36" className="block">
-                  {(() => {
-                    let acc = 0;
-                    return despesasPorCategoria.map((cat: CategoriaData, i: number) => {
-                      const val = (cat.percent / 100) * 100;
-                      const dasharray = `${val} ${100 - val}`;
-                      const dashoffset = 25 - acc;
-                      acc += val;
-                      return (
-                        <circle
-                          key={cat.label}
-                          cx="18" cy="18" r="15.9155"
-                          fill="none"
-                          stroke={cat.color}
-                          strokeWidth="3"
-                          strokeDasharray={dasharray}
-                          strokeDashoffset={dashoffset}
-                          style={{ transition: 'stroke-dasharray 0.3s' }}
-                        />
-                      );
-                    });
-                  })()}
-                </svg>
-              </div>
-              <div className="flex-1 flex flex-col justify-center gap-2 w-full">
-                {despesasPorCategoria.map((cat: CategoriaData) => (
-                  <div key={cat.label} className="flex items-center gap-2 mb-1">
-                    <span className="w-3 h-3 rounded-full" style={{ background: cat.color }} />
-                    <span className="text-gray-700 text-sm">{cat.label}</span>
-                    <span className="bg-gray-100 font-semibold rounded px-2 py-0.5 ml-2 text-gray-600 text-[10px]">{cat.percent.toFixed(2)}%</span>
-                    <span className="ml-auto text-red-600 font-bold text-sm text-right min-w-[100px]">- R$ {cat.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Footer total despesas */}
-            <div className="w-full border-t border-gray-100 mt-6 pt-4 flex items-center justify-between">
-              <span className="font-bold text-gray-800">Total</span>
-              <span className="font-bold text-red-600 text-lg">- R$ {despesasPorCategoria.reduce((sum, cat) => sum + cat.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-            </div>
-          </div>
+          <ModernPieChart
+            data={despesasPorCategoria}
+            title="Despesas por categoria"
+            currency={selectedCurrency}
+          />
+          
           {/* Receitas por categoria */}
-          <div className="bg-white rounded-2xl shadow p-8 flex flex-col min-w-0">
-            <div className="text-xl font-bold text-gray-900 mb-6">Receitas por categoria</div>
-            <div className="flex flex-col sm:flex-row items-center gap-8 flex-1">
-              <div className="flex-shrink-0 flex items-center justify-center mb-4 sm:mb-0">
-                {/* Gráfico donut SVG */}
-                <svg width="160" height="160" viewBox="0 0 36 36" className="block">
-                  {(() => {
-                    let acc = 0;
-                    return receitasPorCategoria.map((cat: CategoriaData, i: number) => {
-                      const val = (cat.percent / 100) * 100;
-                      const dasharray = `${val} ${100 - val}`;
-                      const dashoffset = 25 - acc;
-                      acc += val;
-                      return (
-                        <circle
-                          key={cat.label}
-                          cx="18" cy="18" r="15.9155"
-                          fill="none"
-                          stroke={cat.color}
-                          strokeWidth="3"
-                          strokeDasharray={dasharray}
-                          strokeDashoffset={dashoffset}
-                          style={{ transition: 'stroke-dasharray 0.3s' }}
-                        />
-                      );
-                    });
-                  })()}
-                </svg>
-              </div>
-              <div className="flex-1 flex flex-col justify-center gap-2 w-full">
-                {receitasPorCategoria.map((cat: CategoriaData) => (
-                  <div key={cat.label} className="flex items-center gap-2 mb-1">
-                    <span className="w-3 h-3 rounded-full" style={{ background: cat.color }} />
-                    <span className="text-gray-700 text-sm">{cat.label}</span>
-                    <span className="bg-gray-100 font-semibold rounded px-2 py-0.5 ml-2 text-gray-600 text-[10px]">{cat.percent.toFixed(2)}%</span>
-                    <span className="ml-auto text-green-600 font-bold text-sm text-right min-w-[100px]">R$ {cat.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Footer total receitas */}
-            <div className="w-full border-t border-gray-100 mt-6 pt-4 flex items-center justify-between">
-              <span className="font-bold text-gray-800">Total</span>
-              <span className="font-bold text-green-600 text-lg">R$ {receitasPorCategoria.reduce((sum, cat) => sum + cat.value, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-            </div>
-          </div>
+          <ModernPieChart
+            data={receitasPorCategoria}
+            title="Receitas por categoria"
+            currency={selectedCurrency}
+          />
         </div>
       </div>
       
