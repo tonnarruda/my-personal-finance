@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import TransactionForm from '../components/TransactionForm';
+import CurrencyTransferForm from '../components/CurrencyTransferForm';
 import Select from '../components/Select';
 import CategorySelect from '../components/CategorySelect';
 import DateInput from '../components/DateInput';
@@ -50,6 +51,7 @@ const TransactionsPage: React.FC = () => {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const { isCollapsed } = useSidebar();
+  const [showCurrencyTransferForm, setShowCurrencyTransferForm] = useState(false);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -145,7 +147,7 @@ const TransactionsPage: React.FC = () => {
     if (transaction.is_paid) {
       return {
         text: 'Pago',
-        className: 'bg-green-100 text-green-700'
+        className: 'bg-green-100 text-green-700 cursor-pointer hover:bg-green-200'
       };
     }
 
@@ -160,20 +162,42 @@ const TransactionsPage: React.FC = () => {
       if (dueDateString < todayString) {
         return {
           text: 'Vencida',
-          className: 'bg-red-100 text-red-700'
+          className: 'bg-red-100 text-red-700 cursor-pointer hover:bg-red-200'
         };
       } else if (dueDateString === todayString) {
         return {
           text: 'Vencendo Hoje',
-          className: 'bg-purple-100 text-purple-700'
+          className: 'bg-purple-100 text-purple-700 cursor-pointer hover:bg-purple-200'
         };
       }
     }
 
     return {
       text: 'Pendente',
-      className: 'bg-yellow-100 text-yellow-700'
+      className: 'bg-yellow-100 text-yellow-700 cursor-pointer hover:bg-yellow-200'
     };
+  };
+
+  // Função para alternar o status de pagamento de uma transação
+  const handleTogglePaymentStatus = async (transaction: Transaction) => {
+    try {
+      // Não permitir alteração de status para transferências
+      if (isTransferTransaction(transaction)) {
+        showError('Não é possível alterar o status de uma transferência.');
+        return;
+      }
+
+      const payload = toBackendPayload({
+        ...transaction,
+        is_paid: !transaction.is_paid
+      });
+
+      await transactionService.updateTransaction(transaction.id!, payload);
+      showSuccess('Status da transação atualizado com sucesso!');
+      fetchData();
+    } catch (err) {
+      showError('Erro ao atualizar status da transação.');
+    }
   };
 
   const fetchData = async () => {
@@ -741,6 +765,58 @@ const TransactionsPage: React.FC = () => {
     return options;
   };
 
+  const handleCurrencyTransferSubmit = async (data: any) => {
+    try {
+      // Get account details to access currencies
+      const sourceAccount = accounts.find(acc => acc.id === data.sourceAccountId);
+      const targetAccount = accounts.find(acc => acc.id === data.targetAccountId);
+      
+      if (!sourceAccount || !targetAccount) {
+        throw new Error('Conta não encontrada');
+      }
+
+      // Criar transação de saída (débito da conta origem)
+      const sourceTransaction = {
+        user_id: getUser()?.id,
+        description: `Transferência para ${targetAccount.name}`,
+        amount: Math.round((data.amount + data.fees + data.iof) * 100), // Incluir taxas no valor total
+        type: 'transfer',
+        category_id: data.targetAccountId, // Usar ID da conta destino como category_id
+        account_id: data.sourceAccountId,
+        due_date: data.dueDate,
+        competence_date: data.competenceDate,
+        is_paid: true,
+        observation: `Taxa de câmbio: 1 ${sourceAccount.currency} = ${data.exchangeRate} ${targetAccount.currency}\nTarifas: ${data.fees}\nIOF: ${data.iof}`,
+      };
+
+      // Criar transação de entrada (crédito na conta destino)
+      const targetTransaction = {
+        user_id: getUser()?.id,
+        description: `Transferência de ${sourceAccount.name}`,
+        amount: Math.round(data.convertedAmount * 100),
+        type: 'transfer',
+        category_id: data.sourceAccountId, // Usar ID da conta origem como category_id
+        account_id: data.targetAccountId,
+        due_date: data.dueDate,
+        competence_date: data.competenceDate,
+        is_paid: true,
+        observation: `Taxa de câmbio: 1 ${sourceAccount.currency} = ${data.exchangeRate} ${targetAccount.currency}`,
+      };
+
+      // Criar as transações
+      await Promise.all([
+        transactionService.createTransaction(sourceTransaction),
+        transactionService.createTransaction(targetTransaction),
+      ]);
+
+      showSuccess('Transferência realizada com sucesso!');
+      setShowCurrencyTransferForm(false);
+      fetchData();
+    } catch (err) {
+      showError('Erro ao realizar transferência.');
+    }
+  };
+
   return (
     <Layout>
       <div className={`p-4 sm:p-6 lg:p-8 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
@@ -749,12 +825,20 @@ const TransactionsPage: React.FC = () => {
             <h1 className="text-3xl lg:text-4xl font-extrabold text-gray-900">Transações</h1>
             <p className="mt-2 text-lg text-gray-600">Gerencie suas transações financeiras</p>
           </div>
-          <button
-            onClick={handleOpenForm}
-            className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
-          >
-            + Nova Transação
-          </button>
+          <div className="flex justify-end space-x-4 mb-6">
+            <button
+              onClick={handleOpenForm}
+              className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
+            >
+              + Nova Transação
+            </button>
+            <button
+              onClick={() => setShowCurrencyTransferForm(true)}
+              className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
+            >
+              + Transferência entre Moedas
+            </button>
+          </div>
         </div>
 
         <div className="bg-white shadow rounded-2xl p-6">
@@ -1080,7 +1164,11 @@ const TransactionsPage: React.FC = () => {
                             {(() => {
                               const status = getTransactionStatus(t);
                               return (
-                                <span className={`text-xs font-semibold rounded px-2 py-0.5 ${status.className}`}>
+                                <span 
+                                  className={`text-xs font-semibold rounded px-2 py-0.5 ${status.className} ${!isTransferTransaction(t) ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                                  onClick={() => !isTransferTransaction(t) && handleTogglePaymentStatus(t)}
+                                  title={isTransferTransaction(t) ? 'Não é possível alterar o status de uma transferência' : 'Clique para alterar o status'}
+                                >
                                   {status.text}
                                 </span>
                               );
@@ -1158,6 +1246,26 @@ const TransactionsPage: React.FC = () => {
                   Excluir
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de transferência entre moedas */}
+        {showCurrencyTransferForm && (
+          <div className={`fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4 ${!isCollapsed ? 'lg:pl-64' : 'lg:pl-20'}`}>
+            <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto relative">
+              <button
+                onClick={() => setShowCurrencyTransferForm(false)}
+                className="absolute top-6 right-8 text-gray-400 hover:text-gray-600 text-3xl"
+                title="Fechar"
+              >
+                &times;
+              </button>
+              <CurrencyTransferForm
+                onSubmit={handleCurrencyTransferSubmit}
+                onCancel={() => setShowCurrencyTransferForm(false)}
+                isLoading={false}
+              />
             </div>
           </div>
         )}
