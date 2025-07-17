@@ -120,17 +120,18 @@ const TransactionListModal: React.FC<TransactionListModalProps> = ({
 
         {/* Lista de transações */}
         <div className="overflow-y-auto flex-1 -mx-6 px-6">
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {sortedTransactions.map(transaction => {
               const subcategoryName = getSubcategoryName(transaction.category_id);
               const date = formatDate(transaction.competence_date || transaction.due_date);
+              const percentage = ((transaction.amount / total) * 100).toFixed(1);
               
               return (
                 <div
                   key={transaction.id}
                   className="hover:bg-gray-50 rounded-lg"
                 >
-                  <div className="flex items-center justify-between py-2 px-3">
+                  <div className="flex items-center justify-between py-1.5 px-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="text-sm text-gray-500 whitespace-nowrap">
                         {date}
@@ -151,8 +152,11 @@ const TransactionListModal: React.FC<TransactionListModalProps> = ({
                         )}
                       </div>
                     </div>
-                    <div className="text-right ml-4 whitespace-nowrap">
-                      <div className={`text-sm font-medium ${
+                    <div className="flex items-center gap-4 ml-4">
+                      <div className="text-sm text-gray-500 whitespace-nowrap">
+                        {percentage}%
+                      </div>
+                      <div className={`text-sm font-medium whitespace-nowrap ${
                         transaction.is_paid 
                           ? transaction.type === 'income' 
                             ? 'text-green-600' 

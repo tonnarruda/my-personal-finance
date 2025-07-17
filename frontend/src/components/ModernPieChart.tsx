@@ -117,7 +117,7 @@ const ModernPieChart: React.FC<ModernPieChartProps> = ({ data, title, currency }
 
         {/* Legenda */}
         <div className="flex-1 min-w-0">
-          <div className="space-y-3">
+          <div className="space-y-0.5">
             {data.map((item, index) => (
               <div
                 key={index}
@@ -125,12 +125,18 @@ const ModernPieChart: React.FC<ModernPieChartProps> = ({ data, title, currency }
                 onClick={() => setSelectedCategory(item)}
               >
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-sm font-medium text-gray-900 truncate">{item.label}</div>
-                    <div className="text-sm font-medium text-gray-900">{formatCurrency(item.value)}</div>
+                <div className="flex-1 min-w-0 flex items-center justify-between gap-4">
+                  <div className="text-sm font-medium text-gray-900 truncate">
+                    {item.label}
                   </div>
-                  <div className="text-xs text-gray-500">{item.percent.toFixed(1)}%</div>
+                  <div className="flex items-center gap-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-500">
+                      {item.percent.toFixed(1)}%
+                    </div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {formatCurrency(item.value)}
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
