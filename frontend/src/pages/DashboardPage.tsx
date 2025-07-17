@@ -162,10 +162,14 @@ const DashboardPage: React.FC = () => {
   const transactionsForCurrencyPreviousMonth = transactions.filter(tx => {
     const txDate = new Date(tx.competence_date || tx.due_date);
     const acc = accounts.find(a => a.id === tx.account_id);
+    
+    // Convert dates to YYYY-MM format for comparison
+    const txYearMonth = `${txDate.getFullYear()}-${String(txDate.getMonth() + 1).padStart(2, '0')}`;
+    const previousYearMonth = `${previousYear}-${String(previousMonth).padStart(2, '0')}`;
+    
     return (
       acc && acc.currency === selectedCurrency &&
-      txDate.getMonth() + 1 === previousMonth &&
-      txDate.getFullYear() === previousYear
+      txYearMonth === previousYearMonth
     );
   });
 
@@ -200,6 +204,17 @@ const DashboardPage: React.FC = () => {
   const variacaoReceitas = hasHistoricalData && receitaMesAnterior > 0 ? ((receitaMes - receitaMesAnterior) / receitaMesAnterior) * 100 : 0;
   const variacaoDespesas = hasHistoricalData && despesaMesAnterior > 0 ? ((despesaMes - despesaMesAnterior) / despesaMesAnterior) * 100 : 0;
   const variacaoSaldo = hasHistoricalData && saldoMesAnterior !== 0 ? ((saldoAtual - saldoMesAnterior) / Math.abs(saldoMesAnterior)) * 100 : 0;
+
+  // Log para debug
+  console.log('Previous Month Data:', {
+    month: previousMonth,
+    year: previousYear,
+    transactionsCount: transactionsForCurrencyPreviousMonth.length,
+    hasHistoricalData,
+    despesaMesAnterior,
+    despesaMes,
+    variacaoDespesas
+  });
 
   // Calcula mudança percentual do resultado mensal (apenas quando há dados históricos)
   const percentChangeResultado = hasHistoricalData && resultadoMesAnterior !== 0 ? ((resultadoMes - resultadoMesAnterior) / Math.abs(resultadoMesAnterior)) * 100 : 0;
