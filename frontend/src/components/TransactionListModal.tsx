@@ -120,61 +120,49 @@ const TransactionListModal: React.FC<TransactionListModalProps> = ({
 
         {/* Lista de transações */}
         <div className="overflow-y-auto flex-1 -mx-6 px-6">
-          <div className="space-y-0.5">
+          <div className="flex flex-col">
+            {/* Header */}
+            <div className="flex items-center px-3 py-2 text-xs text-gray-500 border-b">
+              <div className="flex gap-4" style={{ minWidth: '220px' }}>
+                <span>Lanç.</span>
+                <span>Competência</span>
+              </div>
+              <div className="flex-1">
+                <span>Descrição</span>
+              </div>
+              <div className="flex items-center justify-end gap-4">
+                <span>%</span>
+                <span>Valor</span>
+              </div>
+            </div>
+
+            {/* Transaction List */}
             {sortedTransactions.map(transaction => {
               const subcategoryName = getSubcategoryName(transaction.category_id);
               const dueDate = formatDate(transaction.due_date);
-              const competenceDate = formatDate(transaction.competence_date);
+              const competenceDate = transaction.competence_date ? 
+                new Date(transaction.competence_date).toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' }) : 
+                '';
               const percentage = ((transaction.amount / total) * 100).toFixed(1);
               
               return (
                 <div
                   key={transaction.id}
-                  className="hover:bg-gray-50 rounded-lg"
+                  className="hover:bg-gray-50"
                 >
-                  <div className="flex items-center justify-between py-1.5 px-3">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="flex flex-col text-sm text-gray-500 whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs text-gray-400">Venc:</span>
-                          <span>{dueDate}</span>
-                        </div>
-                        {competenceDate && competenceDate !== dueDate && (
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-gray-400">Comp:</span>
-                            <span>{competenceDate}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-gray-900 truncate">
-                          {transaction.description}
-                          {subcategoryName && (
-                            <span className="ml-2 text-xs font-medium px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
-                              {subcategoryName}
-                            </span>
-                          )}
-                        </div>
-                        {transaction.observation && (
-                          <div className="text-xs text-gray-500 truncate">
-                            {transaction.observation}
-                          </div>
-                        )}
-                      </div>
+                  <div className="flex items-center px-3 py-1.5">
+                    <div className="flex gap-4" style={{ minWidth: '220px' }}>
+                      <span className="text-sm text-gray-600">{dueDate}</span>
+                      <span className="text-sm text-gray-600">{competenceDate}</span>
                     </div>
-                    <div className="flex items-center gap-4 ml-4">
-                      <div className="text-sm text-gray-500 whitespace-nowrap">
-                        {percentage}%
-                      </div>
-                      <div className={`text-sm font-medium whitespace-nowrap ${
-                        transaction.is_paid 
-                          ? transaction.type === 'income' 
-                            ? 'text-green-600' 
-                            : 'text-red-600'
-                          : 'text-gray-500'
-                      }`}>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm text-gray-900">{subcategoryName}</span>
+                    </div>
+                    <div className="flex items-center justify-end gap-4">
+                      <span className="text-sm text-gray-500">{percentage}%</span>
+                      <span className="text-sm font-medium text-gray-900">
                         {formatCurrency(transaction.amount)}
-                      </div>
+                      </span>
                     </div>
                   </div>
                 </div>
