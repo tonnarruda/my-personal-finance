@@ -91,8 +91,8 @@ const TransactionListModal: React.FC<TransactionListModalProps> = ({
 
   // Ordena as transações por data (mais antigas primeiro)
   const sortedTransactions = [...transactions].sort((a, b) => {
-    const dateA = new Date((a.competence_date || a.due_date) ?? '');
-    const dateB = new Date((b.competence_date || b.due_date) ?? '');
+    const dateA = new Date(a.due_date || a.competence_date || '');
+    const dateB = new Date(b.due_date || b.competence_date || '');
     return dateA.getTime() - dateB.getTime();
   });
 
@@ -123,7 +123,7 @@ const TransactionListModal: React.FC<TransactionListModalProps> = ({
           <div className="space-y-0.5">
             {sortedTransactions.map(transaction => {
               const subcategoryName = getSubcategoryName(transaction.category_id);
-              const date = formatDate(transaction.competence_date || transaction.due_date);
+              const date = formatDate(transaction.due_date || transaction.competence_date);
               const percentage = ((transaction.amount / total) * 100).toFixed(1);
               
               return (
