@@ -123,7 +123,8 @@ const TransactionListModal: React.FC<TransactionListModalProps> = ({
           <div className="space-y-0.5">
             {sortedTransactions.map(transaction => {
               const subcategoryName = getSubcategoryName(transaction.category_id);
-              const date = formatDate(transaction.due_date || transaction.competence_date);
+              const dueDate = formatDate(transaction.due_date);
+              const competenceDate = formatDate(transaction.competence_date);
               const percentage = ((transaction.amount / total) * 100).toFixed(1);
               
               return (
@@ -133,8 +134,17 @@ const TransactionListModal: React.FC<TransactionListModalProps> = ({
                 >
                   <div className="flex items-center justify-between py-1.5 px-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="text-sm text-gray-500 whitespace-nowrap">
-                        {date}
+                      <div className="flex flex-col text-sm text-gray-500 whitespace-nowrap">
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-gray-400">Venc:</span>
+                          <span>{dueDate}</span>
+                        </div>
+                        {competenceDate && competenceDate !== dueDate && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-400">Comp:</span>
+                            <span>{competenceDate}</span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-gray-900 truncate">
