@@ -61,7 +61,9 @@ const TransactionListModal: React.FC<TransactionListModalProps> = ({
   const formatDate = (dateStr: string | undefined) => {
     if (!dateStr) return '-';
     const date = new Date(dateStr);
-    return date.toLocaleDateString('pt-BR');
+    // Ajusta para o timezone local
+    const localDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+    return localDate.toLocaleDateString('pt-BR');
   };
 
   // Função para formatar valor
@@ -129,9 +131,11 @@ const TransactionListModal: React.FC<TransactionListModalProps> = ({
               </div>
               <div className="flex-1">
                 <span>Descrição</span>
-                <span className="pl-72">%</span>
               </div>
-              <div className="flex items-center gap-8">
+              <div className="w-32 text-center">
+                <span>%</span>
+              </div>
+              <div className="w-32 text-right">
                 <span>Valor</span>
               </div>
             </div>
@@ -153,13 +157,15 @@ const TransactionListModal: React.FC<TransactionListModalProps> = ({
                   <div className="flex items-center px-3 py-1.5">
                     <div className="flex" style={{ minWidth: '220px' }}>
                       <span className="text-sm text-gray-600 w-24">{dueDate}</span>
-                      <span className="text-sm text-gray-600 pl-8">{competenceDate}</span>
+                      <span className="text-sm text-gray-600 pl-6">{competenceDate}</span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm text-gray-900">{subcategoryName}</span>
+                    <div className="flex-1">
+                      <span className="text-sm text-gray-900">{transaction.description}</span>
                     </div>
-                    <div className="flex items-center gap-8">
+                    <div className="w-32 text-center">
                       <span className="text-sm text-gray-500">{percentage}%</span>
+                    </div>
+                    <div className="w-32 text-right">
                       <span className="text-sm font-medium text-gray-900">
                         {formatCurrency(transaction.amount)}
                       </span>
