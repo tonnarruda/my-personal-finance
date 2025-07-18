@@ -123,15 +123,15 @@ const TransactionListModal: React.FC<TransactionListModalProps> = ({
           <div className="flex flex-col">
             {/* Header */}
             <div className="flex items-center px-3 py-2 text-xs text-gray-500 border-b">
-              <div className="flex gap-4" style={{ minWidth: '220px' }}>
-                <span>Lanç.</span>
-                <span>Competência</span>
+              <div className="flex" style={{ minWidth: '220px' }}>
+                <span className="w-24">Lanç.</span>
+                <span className="pl-6">Competência</span>
               </div>
               <div className="flex-1">
                 <span>Descrição</span>
+                <span className="pl-72">%</span>
               </div>
-              <div className="flex items-center justify-end gap-4">
-                <span>%</span>
+              <div className="flex items-center gap-8">
                 <span>Valor</span>
               </div>
             </div>
@@ -151,14 +151,14 @@ const TransactionListModal: React.FC<TransactionListModalProps> = ({
                   className="hover:bg-gray-50"
                 >
                   <div className="flex items-center px-3 py-1.5">
-                    <div className="flex gap-4" style={{ minWidth: '220px' }}>
-                      <span className="text-sm text-gray-600">{dueDate}</span>
-                      <span className="text-sm text-gray-600">{competenceDate}</span>
+                    <div className="flex" style={{ minWidth: '220px' }}>
+                      <span className="text-sm text-gray-600 w-24">{dueDate}</span>
+                      <span className="text-sm text-gray-600 pl-8">{competenceDate}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-sm text-gray-900">{subcategoryName}</span>
                     </div>
-                    <div className="flex items-center justify-end gap-4">
+                    <div className="flex items-center gap-8">
                       <span className="text-sm text-gray-500">{percentage}%</span>
                       <span className="text-sm font-medium text-gray-900">
                         {formatCurrency(transaction.amount)}
