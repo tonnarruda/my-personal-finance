@@ -501,13 +501,31 @@ const TransactionsPage: React.FC = () => {
     return da.getTime() - db.getTime();
   });
 
+  // Função para verificar se ambas as contas de uma transferência estão selecionadas
+  const shouldIgnoreTransfer = (transaction: Transaction) => {
+    if (!isTransferTransaction(transaction)) return false;
+    
+    // Se nenhuma conta está selecionada, ignora a transferência
+    if (selectedBanks.length === 0) return true;
+
+    // Encontra a outra transação da transferência
+    const relatedTransactions = transactions.filter(t => 
+      t.transfer_id === transaction.transfer_id && isTransferTransaction(t)
+    );
+    const otherTransaction = relatedTransactions.find(t => t.id !== transaction.id);
+    
+    if (!otherTransaction) return false;
+
+    // Se ambas as contas da transferência estão selecionadas, ignora a transferência
+    return selectedBanks.includes(transaction.account_id) && selectedBanks.includes(otherTransaction.account_id);
+  };
+
   // Função para calcular o saldo do dia
   function calculateDayBalance(transactions: Transaction[]) {
     return transactions.reduce((acc, t) => {
       if (considerUnpaidTransactions || t.is_paid) {
-        // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
-        // Se há filtro de conta específica, incluir transferências que afetam essa conta
-        if (isTransferTransaction(t) && selectedBanks.length === 0) {
+        // Ignora transferências quando ambas as contas estão selecionadas
+        if (shouldIgnoreTransfer(t)) {
           return acc;
         }
         return acc + (t.type === 'income' ? t.amount : -t.amount);
@@ -563,9 +581,8 @@ const TransactionsPage: React.FC = () => {
   });
 
   const saldoAnteriorCalc = transacoesParaSaldoAnterior.reduce((acc, t) => {
-    // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
-    // Se há filtro de conta específica, incluir transferências que afetam essa conta
-    if (isTransferTransaction(t) && selectedBanks.length === 0) {
+    // Ignora transferências quando ambas as contas estão selecionadas
+    if (shouldIgnoreTransfer(t)) {
       return acc;
     }
     return acc + (t.type === 'income' ? t.amount : -t.amount);
@@ -580,9 +597,8 @@ const TransactionsPage: React.FC = () => {
     const transacoesDoDia = groupedByDate[dateKey];
     const somaDoDia = transacoesDoDia.reduce((acc, t) => {
       if (considerUnpaidTransactions || t.is_paid) {
-        // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
-        // Se há filtro de conta específica, incluir transferências que afetam essa conta
-        if (isTransferTransaction(t) && selectedBanks.length === 0) {
+        // Ignora transferências quando ambas as contas estão selecionadas
+        if (shouldIgnoreTransfer(t)) {
           return acc;
         }
         return acc + (t.type === 'income' ? t.amount : -t.amount);
@@ -1134,7 +1150,7 @@ const TransactionsPage: React.FC = () => {
                           </td>
                           <td className="px-2 sm:px-4 py-3 align-middle text-right">
                             <span className={`font-bold flex items-center gap-1 justify-end ${
-                              isTransferTransaction(t) && selectedBanks.length === 0 
+                              shouldIgnoreTransfer(t)
                                 ? 'text-gray-900' 
                                 : t.type === 'income' ? 'text-green-600' : 'text-red-600'
                             }`}> 
