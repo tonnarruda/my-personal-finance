@@ -525,6 +525,7 @@ const TransactionsPage: React.FC = () => {
     return index === firstOccurrenceIndex;
   });
 
+  // Calcular saldo anterior considerando todas as transações até o período anterior
   const transacoesParaSaldoAnterior = allTransactionsWithoutDuplicates.filter(t => {
     const acc = accounts.find(a => a.id === t.account_id);
     const categoryMatch = transactionMatchesCategory(t, selectedCategory);
@@ -542,8 +543,6 @@ const TransactionsPage: React.FC = () => {
     const shouldInclude = (
       acc &&
       acc.currency === selectedCurrency &&
-      // Para saldo anterior, sempre considerar todas as contas da moeda
-      // O filtro de banco só se aplica ao período atual
       categoryMatch &&
       (considerUnpaidTransactions || t.is_paid) &&
       competence &&
@@ -554,16 +553,30 @@ const TransactionsPage: React.FC = () => {
     return shouldInclude;
   });
 
-  const saldoAnteriorCalc = transacoesParaSaldoAnterior.reduce((acc, t) => {
+  // Calcular saldo total até o período anterior
+  const saldoTotalAnterior = transacoesParaSaldoAnterior.reduce((acc, t) => {
     // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
-    // Se há filtro de conta específica, incluir transferências que afetam essa conta
     if (isTransferTransaction(t) && selectedBank === '') {
       return acc;
     }
     return acc + (t.type === 'income' ? t.amount : -t.amount);
   }, 0);
+
+  // Se há filtro de banco, calcular apenas o saldo do banco selecionado até o período anterior
+  let saldoAnterior = saldoTotalAnterior;
+  if (selectedBank !== '') {
+    const transacoesBancoAnterior = transacoesParaSaldoAnterior.filter(t => t.account_id === selectedBank);
+    saldoAnterior = transacoesBancoAnterior.reduce((acc, t) => {
+      // Se há filtro de conta específica, incluir transferências que afetam essa conta
+      if (isTransferTransaction(t)) {
+        return acc;
+      }
+      return acc + (t.type === 'income' ? t.amount : -t.amount);
+    }, 0);
+  }
+
   // Garante que zero seja sempre positivo (evita -0)
-  const saldoAnterior = saldoAnteriorCalc === 0 ? 0 : saldoAnteriorCalc;
+  saldoAnterior = saldoAnterior === 0 ? 0 : saldoAnterior;
 
   // Calcular saldo acumulado para cada dia (saldo do dia = saldo anterior + transações do dia)
   let saldoAcumulado = saldoAnterior;
