@@ -495,6 +495,18 @@ const TransactionsPage: React.FC = () => {
     }, 0);
   }
 
+  // Função para calcular o saldo projetado (incluindo transações não pagas)
+  function getSaldoProjetado(transactions: typeof transactionsForCurrencySorted) {
+    return transactions.reduce((acc, t) => {
+      // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
+      // Se há filtro de conta específica, incluir transferências que afetam essa conta
+      if (isTransferTransaction(t) && selectedBank === '') {
+        return acc;
+      }
+      return acc + (t.type === 'income' ? t.amount : -t.amount);
+    }, 0);
+  }
+
   // Saldo anterior: acumulado até o período anterior ao selecionado
   // Usar apenas as transações que passaram pelos filtros (moeda, banco, categoria)
   // Para visualização por competência, considerar transações com competence_date anterior ao período
@@ -558,24 +570,17 @@ const TransactionsPage: React.FC = () => {
 
   // Calcular saldo acumulado para cada dia (saldo do dia = saldo anterior + transações pagas do dia)
   let saldoAcumulado = saldoAnterior;
+  let saldoProjetadoAcumulado = saldoAnterior;
   const saldoPorDia: Record<string, number> = {};
-  for (const dateKey of sortedDates) {
-    const transacoesDoDia = groupedByDate[dateKey];
-    const somaDoDia = transacoesDoDia.reduce((acc, t) => {
-      if (t.is_paid) {
-        // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
-        // Se há filtro de conta específica, incluir transferências que afetam essa conta
-        if (isTransferTransaction(t) && selectedBank === '') {
-          return acc;
-        }
-        return acc + (t.type === 'income' ? t.amount : -t.amount);
-      }
-      return acc;
-    }, 0);
-    saldoAcumulado += somaDoDia;
-    // Garante que zero seja sempre positivo (evita -0)
-    saldoPorDia[dateKey] = saldoAcumulado === 0 ? 0 : saldoAcumulado;
-  }
+  const saldoProjetadoPorDia: Record<string, number> = {};
+
+  sortedDates.forEach(dateKey => {
+    const transacoesNoDia = groupedByDate[dateKey];
+    saldoAcumulado += getSaldoDoDia(transacoesNoDia);
+    saldoProjetadoAcumulado += getSaldoProjetado(transacoesNoDia);
+    saldoPorDia[dateKey] = saldoAcumulado;
+    saldoProjetadoPorDia[dateKey] = saldoProjetadoAcumulado;
+  });
 
   // Função para decidir cor do texto baseada na cor de fundo (hex)
   function getTextColor(bg: string) {
@@ -948,11 +953,18 @@ const TransactionsPage: React.FC = () => {
             <div key={dateKey} className="mb-8">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-gray-50 rounded-t-2xl px-4 sm:px-8 py-4 gap-2">
                 <span className="text-lg sm:text-xl font-bold text-gray-900">{dateKey}</span>
-                <span className="text-sm sm:text-base text-gray-700 font-medium">
-                  Saldo do dia: <span className="font-bold">
-                    {saldoPorDia[dateKey].toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency })}
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-6 items-end sm:items-center">
+                  <span className="text-sm sm:text-base text-gray-700 font-medium">
+                    Saldo do dia: <span className="font-bold">
+                      {saldoPorDia[dateKey].toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency })}
+                    </span>
                   </span>
-                </span>
+                  <span className="text-sm sm:text-base text-gray-700 font-medium">
+                    Saldo projetado: <span className="font-bold">
+                      {saldoProjetadoPorDia[dateKey].toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency })}
+                    </span>
+                  </span>
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left min-w-[800px]">
