@@ -498,6 +498,10 @@ const TransactionsPage: React.FC = () => {
         if (isTransferTransaction(t) && selectedBank === '') {
           return acc;
         }
+        // Aplicar filtro de banco
+        if (selectedBank !== '' && t.account_id !== selectedBank) {
+          return acc;
+        }
         return acc + (t.type === 'income' ? t.amount : -t.amount);
       }
       return acc;
@@ -523,7 +527,6 @@ const TransactionsPage: React.FC = () => {
 
   const transacoesParaSaldoAnterior = allTransactionsWithoutDuplicates.filter(t => {
     const acc = accounts.find(a => a.id === t.account_id);
-    const bankMatch = selectedBank === '' || t.account_id === selectedBank;
     const categoryMatch = transactionMatchesCategory(t, selectedCategory);
     const competence = parseDateString(t.competence_date);
     
@@ -539,7 +542,8 @@ const TransactionsPage: React.FC = () => {
     const shouldInclude = (
       acc &&
       acc.currency === selectedCurrency &&
-      bankMatch &&
+      // Para saldo anterior, sempre considerar todas as contas da moeda
+      // O filtro de banco só se aplica ao período atual
       categoryMatch &&
       (considerUnpaidTransactions || t.is_paid) &&
       competence &&
@@ -571,6 +575,10 @@ const TransactionsPage: React.FC = () => {
         // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
         // Se há filtro de conta específica, incluir transferências que afetam essa conta
         if (isTransferTransaction(t) && selectedBank === '') {
+          return acc;
+        }
+        // Aplicar filtro de banco apenas para o período atual
+        if (selectedBank !== '' && t.account_id !== selectedBank) {
           return acc;
         }
         return acc + (t.type === 'income' ? t.amount : -t.amount);
