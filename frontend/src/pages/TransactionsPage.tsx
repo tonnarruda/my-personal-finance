@@ -36,6 +36,10 @@ const TransactionsPage: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [considerUnpaidTransactions, setConsiderUnpaidTransactions] = useState(() => {
+    const saved = localStorage.getItem('considerUnpaidTransactions');
+    return saved ? JSON.parse(saved) : false;
+  });
   const today = new Date();
   const [selectedMonthYear, setSelectedMonthYear] = useState({
     month: today.getMonth() + 1,
@@ -60,6 +64,11 @@ const TransactionsPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [selectedMonthYear.month, selectedMonthYear.year, selectedCurrency, isCustomDateRange, customStartDate, customEndDate]);
+
+  // Efeito para salvar a preferência do usuário
+  useEffect(() => {
+    localStorage.setItem('considerUnpaidTransactions', JSON.stringify(considerUnpaidTransactions));
+  }, [considerUnpaidTransactions]);
 
   // Fechar dropdown quando clicar fora
   useEffect(() => {
@@ -480,10 +489,10 @@ const TransactionsPage: React.FC = () => {
     return da.getTime() - db.getTime();
   });
 
-  // Calcular saldo do dia para cada grupo
-  function getSaldoDoDia(transactions: typeof transactionsForCurrencySorted) {
+  // Função para calcular o saldo do dia
+  function calculateDayBalance(transactions: Transaction[]) {
     return transactions.reduce((acc, t) => {
-      if (t.is_paid) {
+      if (considerUnpaidTransactions || t.is_paid) {
         // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
         // Se há filtro de conta específica, incluir transferências que afetam essa conta
         if (isTransferTransaction(t) && selectedBank === '') {
@@ -492,18 +501,6 @@ const TransactionsPage: React.FC = () => {
         return acc + (t.type === 'income' ? t.amount : -t.amount);
       }
       return acc;
-    }, 0);
-  }
-
-  // Função para calcular o saldo projetado (incluindo transações não pagas)
-  function getSaldoProjetado(transactions: typeof transactionsForCurrencySorted) {
-    return transactions.reduce((acc, t) => {
-      // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
-      // Se há filtro de conta específica, incluir transferências que afetam essa conta
-      if (isTransferTransaction(t) && selectedBank === '') {
-        return acc;
-      }
-      return acc + (t.type === 'income' ? t.amount : -t.amount);
     }, 0);
   }
 
@@ -544,13 +541,11 @@ const TransactionsPage: React.FC = () => {
       acc.currency === selectedCurrency &&
       bankMatch &&
       categoryMatch &&
-      t.is_paid &&
+      (considerUnpaidTransactions || t.is_paid) &&
       competence &&
       periodoInicio &&
       competence < periodoInicio
     );
-
-
 
     return shouldInclude;
   });
@@ -566,21 +561,26 @@ const TransactionsPage: React.FC = () => {
   // Garante que zero seja sempre positivo (evita -0)
   const saldoAnterior = saldoAnteriorCalc === 0 ? 0 : saldoAnteriorCalc;
 
-
-
-  // Calcular saldo acumulado para cada dia (saldo do dia = saldo anterior + transações pagas do dia)
+  // Calcular saldo acumulado para cada dia (saldo do dia = saldo anterior + transações do dia)
   let saldoAcumulado = saldoAnterior;
-  let saldoProjetadoAcumulado = saldoAnterior;
   const saldoPorDia: Record<string, number> = {};
-  const saldoProjetadoPorDia: Record<string, number> = {};
-
-  sortedDates.forEach(dateKey => {
-    const transacoesNoDia = groupedByDate[dateKey];
-    saldoAcumulado += getSaldoDoDia(transacoesNoDia);
-    saldoProjetadoAcumulado += getSaldoProjetado(transacoesNoDia);
-    saldoPorDia[dateKey] = saldoAcumulado;
-    saldoProjetadoPorDia[dateKey] = saldoProjetadoAcumulado;
-  });
+  for (const dateKey of sortedDates) {
+    const transacoesDoDia = groupedByDate[dateKey];
+    const somaDoDia = transacoesDoDia.reduce((acc, t) => {
+      if (considerUnpaidTransactions || t.is_paid) {
+        // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
+        // Se há filtro de conta específica, incluir transferências que afetam essa conta
+        if (isTransferTransaction(t) && selectedBank === '') {
+          return acc;
+        }
+        return acc + (t.type === 'income' ? t.amount : -t.amount);
+      }
+      return acc;
+    }, 0);
+    saldoAcumulado += somaDoDia;
+    // Garante que zero seja sempre positivo (evita -0)
+    saldoPorDia[dateKey] = saldoAcumulado === 0 ? 0 : saldoAcumulado;
+  }
 
   // Função para decidir cor do texto baseada na cor de fundo (hex)
   function getTextColor(bg: string) {
@@ -801,6 +801,18 @@ const TransactionsPage: React.FC = () => {
                   className="w-full sm:min-w-[200px]"
                 />
               </div>
+              <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                <input
+                  type="checkbox"
+                  id="considerUnpaidTransactions"
+                  checked={considerUnpaidTransactions}
+                  onChange={(e) => setConsiderUnpaidTransactions(e.target.checked)}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer"
+                />
+                <label htmlFor="considerUnpaidTransactions" className="text-sm text-gray-600 cursor-pointer select-none">
+                  Considerar não pagas
+                </label>
+              </div>
             </div>
 
             <div className="flex items-center justify-center gap-2 sm:gap-4 select-none relative">
@@ -953,18 +965,11 @@ const TransactionsPage: React.FC = () => {
             <div key={dateKey} className="mb-8">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-gray-50 rounded-t-2xl px-4 sm:px-8 py-4 gap-2">
                 <span className="text-lg sm:text-xl font-bold text-gray-900">{dateKey}</span>
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-6 items-end sm:items-center">
-                  <span className="text-sm sm:text-base text-gray-700 font-medium">
-                    Saldo do dia: <span className="font-bold">
-                      {saldoPorDia[dateKey].toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency })}
-                    </span>
+                <span className="text-sm sm:text-base text-gray-700 font-medium">
+                  Saldo do dia: <span className="font-bold">
+                    {saldoPorDia[dateKey].toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency })}
                   </span>
-                  <span className="text-sm sm:text-base text-gray-700 font-medium">
-                    Saldo projetado: <span className="font-bold">
-                      {saldoProjetadoPorDia[dateKey].toLocaleString('pt-BR', { style: 'currency', currency: selectedCurrency })}
-                    </span>
-                  </span>
-                </div>
+                </span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left min-w-[800px]">
