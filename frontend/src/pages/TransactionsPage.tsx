@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import TransactionForm from '../components/TransactionForm';
 import Select from '../components/Select';
+import MultiSelect from '../components/MultiSelect';
 import CategorySelect from '../components/CategorySelect';
 import DateInput from '../components/DateInput';
 import { accountService, transactionService, categoryService } from '../services/api';
@@ -9,6 +10,11 @@ import { Transaction } from '../types/transaction';
 import { getUser } from '../services/auth';
 import { useToast } from '../contexts/ToastContext';
 import { useSidebar } from '../contexts/SidebarContext';
+
+interface BankOption {
+  value: string;
+  label: React.ReactNode;
+}
 
 const monthNames = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -28,7 +34,7 @@ function hexToRgba(hex: string, alpha: number) {
 
 const TransactionsPage: React.FC = () => {
   // Garanta que o valor inicial dos filtros seja ''
-  const [selectedBank, setSelectedBank] = useState('');
+  const [selectedBanks, setSelectedBanks] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState('BRL');
@@ -270,12 +276,18 @@ const TransactionsPage: React.FC = () => {
     return false;
   }
 
-  // Filtrar transações por moeda, banco e categoria
+  // Função para verificar se uma transação corresponde aos bancos selecionados
+  const transactionMatchesBank = (transaction: Transaction) => {
+    if (selectedBanks.length === 0) return true;
+    return selectedBanks.includes(transaction.account_id);
+  };
+
+  // Filtrar transações
   const transactionsForCurrency = transactions.filter(t => {
     const acc = accounts.find(a => a.id === t.account_id);
-    const bankMatch = selectedBank === '' || t.account_id === selectedBank;
+    const currencyMatch = acc && acc.currency === selectedCurrency;
+    const bankMatch = transactionMatchesBank(t);
     const categoryMatch = transactionMatchesCategory(t, selectedCategory);
-    const currencyMatch = acc?.currency === selectedCurrency;
 
     // Para range personalizado
     if (isCustomDateRange) {
@@ -495,7 +507,7 @@ const TransactionsPage: React.FC = () => {
       if (considerUnpaidTransactions || t.is_paid) {
         // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
         // Se há filtro de conta específica, incluir transferências que afetam essa conta
-        if (isTransferTransaction(t) && selectedBank === '') {
+        if (isTransferTransaction(t) && selectedBanks.length === 0) {
           return acc;
         }
         return acc + (t.type === 'income' ? t.amount : -t.amount);
@@ -523,7 +535,7 @@ const TransactionsPage: React.FC = () => {
 
   const transacoesParaSaldoAnterior = allTransactionsWithoutDuplicates.filter(t => {
     const acc = accounts.find(a => a.id === t.account_id);
-    const bankMatch = selectedBank === '' || t.account_id === selectedBank;
+    const bankMatch = transactionMatchesBank(t);
     const categoryMatch = transactionMatchesCategory(t, selectedCategory);
     const competence = parseDateString(t.competence_date);
     
@@ -553,7 +565,7 @@ const TransactionsPage: React.FC = () => {
   const saldoAnteriorCalc = transacoesParaSaldoAnterior.reduce((acc, t) => {
     // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
     // Se há filtro de conta específica, incluir transferências que afetam essa conta
-    if (isTransferTransaction(t) && selectedBank === '') {
+    if (isTransferTransaction(t) && selectedBanks.length === 0) {
       return acc;
     }
     return acc + (t.type === 'income' ? t.amount : -t.amount);
@@ -570,7 +582,7 @@ const TransactionsPage: React.FC = () => {
       if (considerUnpaidTransactions || t.is_paid) {
         // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
         // Se há filtro de conta específica, incluir transferências que afetam essa conta
-        if (isTransferTransaction(t) && selectedBank === '') {
+        if (isTransferTransaction(t) && selectedBanks.length === 0) {
           return acc;
         }
         return acc + (t.type === 'income' ? t.amount : -t.amount);
@@ -779,14 +791,31 @@ const TransactionsPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
               <div className="w-full sm:w-auto">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Banco</label>
-                <Select
-                  value={selectedBank}
-                  onChange={val => setSelectedBank(val)}
-                  options={[
-                    { value: '', label: 'Todos' },
-                    ...(accountsByCurrency[selectedCurrency]?.sort((a, b) => a.name.localeCompare(b.name)).map(acc => ({ value: acc.id, label: acc.name })) || [])
-                  ]}
+                <MultiSelect
+                  value={selectedBanks}
+                  onChange={setSelectedBanks}
+                  options={accountsByCurrency[selectedCurrency]?.sort((a, b) => a.name.localeCompare(b.name)).map(acc => ({ 
+                    value: acc.id, 
+                    label: (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedBanks.includes(acc.id)}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const newSelectedBanks = selectedBanks.includes(acc.id)
+                              ? selectedBanks.filter(id => id !== acc.id)
+                              : [...selectedBanks, acc.id];
+                            setSelectedBanks(newSelectedBanks);
+                          }}
+                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        />
+                        <span>{acc.name}</span>
+                      </div>
+                    )
+                  })) || []}
                   className="w-full sm:min-w-[200px]"
+                  placeholder="Selecione as contas..."
                 />
               </div>
               <div className="w-full sm:w-auto">
@@ -1105,7 +1134,7 @@ const TransactionsPage: React.FC = () => {
                           </td>
                           <td className="px-2 sm:px-4 py-3 align-middle text-right">
                             <span className={`font-bold flex items-center gap-1 justify-end ${
-                              isTransferTransaction(t) && selectedBank === '' 
+                              isTransferTransaction(t) && selectedBanks.length === 0 
                                 ? 'text-gray-900' 
                                 : t.type === 'income' ? 'text-green-600' : 'text-red-600'
                             }`}> 
