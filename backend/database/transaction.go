@@ -74,7 +74,7 @@ func (d *Database) GetTransactionByID(id string, userID string) (*structs.Transa
 
 // GetAllTransactionsByUser lista todas as transações de um usuário
 func (d *Database) GetAllTransactionsByUser(userID string) ([]structs.Transaction, error) {
-	query := `SELECT id, user_id, description, amount, type, category_id, account_id, due_date, competence_date, is_paid, observation, is_recurring, recurring_type, installments, current_installment, parent_transaction_id, transfer_id, created_at, updated_at, deleted_at FROM transactions WHERE user_id = $1 AND deleted_at IS NULL ORDER BY due_date DESC, created_at DESC`
+	query := `SELECT id, user_id, description, amount, type, category_id, account_id, due_date, competence_date, is_paid, observation, is_recurring, recurring_type, installments, current_installment, parent_transaction_id, transfer_id, created_at, updated_at, deleted_at FROM transactions WHERE user_id = $1 AND deleted_at IS NULL ORDER BY due_date ASC, created_at ASC`
 	rows, err := d.db.Query(query, userID)
 	if err != nil {
 		return nil, err
