@@ -1,6 +1,6 @@
 // Configuração da API
 const getApiBaseUrl = (): string => {
-  const envUrl = process.env.REACT_APP_API_BASE_URL;
+  const envUrl = process.env.REACT_APP_API_URL;
   
   if (envUrl) {
     console.log('[CONFIG] Usando URL da API do env:', envUrl);
@@ -22,5 +22,9 @@ const getApiBaseUrl = (): string => {
 };
 
 export const API_CONFIG = {
-  BASE_URL: getApiBaseUrl()
+  BASE_URL: getApiBaseUrl(),
+};
+
+export const EXCHANGE_RATE_CONFIG = {
+  BASE_URL: 'https://api.frankfurter.app',
 }; 
