@@ -47,6 +47,15 @@ const CurrencyTransferForm: React.FC<CurrencyTransferFormProps> = ({
       const sourceAcc = accounts.find(acc => acc.id === form.sourceAccountId);
       if (sourceAcc) {
         setSourceCurrency(sourceAcc.currency);
+        
+        // Limpar conta de destino se ela tiver a mesma moeda da origem
+        if (form.targetAccountId) {
+          const targetAcc = accounts.find(acc => acc.id === form.targetAccountId);
+          if (targetAcc && targetAcc.currency === sourceAcc.currency) {
+            handleChange('targetAccountId', '');
+            setTargetCurrency('');
+          }
+        }
       }
     }
     if (form.targetAccountId) {
@@ -190,7 +199,14 @@ const CurrencyTransferForm: React.FC<CurrencyTransferFormProps> = ({
             options={[
               { value: '', label: 'Selecione a conta de destino' },
               ...accounts
-                .filter(acc => acc.is_active && acc.id !== form.sourceAccountId)
+                .filter(acc => {
+                  // Filtrar contas ativas, diferentes da origem e com moeda diferente
+                  const isActive = acc.is_active;
+                  const isDifferentAccount = acc.id !== form.sourceAccountId;
+                  const hasDifferentCurrency = sourceCurrency && acc.currency !== sourceCurrency;
+                  
+                  return isActive && isDifferentAccount && hasDifferentCurrency;
+                })
                 .sort((a, b) => a.name.localeCompare(b.name))
                 .map(acc => ({ 
                   value: acc.id, 

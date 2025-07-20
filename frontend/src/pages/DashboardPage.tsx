@@ -121,6 +121,9 @@ const DashboardPage: React.FC = () => {
     accountsByCurrency[acc.currency].push(acc);
   });
   const currencies = Object.keys(accountsByCurrency);
+  
+  // Verificar se existem múltiplas moedas para mostrar a opção de transferência entre moedas
+  const hasMultipleCurrencies = currencies.length > 1;
 
   // Filtra transações do mês atual e moeda selecionada
   const now = new Date();
@@ -517,7 +520,7 @@ const DashboardPage: React.FC = () => {
             </button>
             <div className="relative flex">
               <button 
-                onClick={handleTransferClick}
+                onClick={hasMultipleCurrencies ? handleTransferClick : handleOpenTransferModal}
                 className="transfer-button flex-1 flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl px-6 py-0 shadow-sm hover:bg-gray-100 transition"
               >
                 <span className="text-2xl text-gray-500 mb-2">
@@ -525,7 +528,7 @@ const DashboardPage: React.FC = () => {
                 </span>
                 <span className="text-gray-700 text-base font-medium">TRANSFERÊNCIA</span>
               </button>
-              {showTransferDropdown && (
+              {showTransferDropdown && hasMultipleCurrencies && (
                 <div 
                   className="transfer-dropdown absolute z-50 mt-2 w-56 rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
                   style={{ 

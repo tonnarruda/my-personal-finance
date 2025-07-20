@@ -238,6 +238,9 @@ const TransactionsPage: React.FC = () => {
     accountsByCurrency[acc.currency].push(acc);
   });
   const currencies = Object.keys(accountsByCurrency);
+  
+  // Verificar se existem múltiplas moedas para mostrar o botão de transferência
+  const hasMultipleCurrencies = currencies.length > 1;
 
   function extractMonthYear(dateStr: string | undefined) {
     if (!dateStr) return { month: 0, year: 0 };
@@ -832,12 +835,14 @@ const TransactionsPage: React.FC = () => {
             >
               + Nova Transação
             </button>
-            <button
-              onClick={() => setShowCurrencyTransferForm(true)}
-              className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
-            >
-              + Transferência entre Moedas
-            </button>
+            {hasMultipleCurrencies && (
+              <button
+                onClick={() => setShowCurrencyTransferForm(true)}
+                className="px-6 py-3 rounded-xl text-lg font-medium transition-colors duration-150 bg-[#f1f3fe] text-[#6366f1] hover:bg-indigo-100 hover:text-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-700"
+              >
+                + Transferência entre Moedas
+              </button>
+            )}
           </div>
         </div>
 

@@ -233,7 +233,7 @@ const DateInput: React.FC<DateInputProps> = ({
         <input
           ref={inputRef}
           id={id || uniqueId.current}
-          className={`w-full pr-12 pl-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50 text-center transition-all duration-150 shadow-sm ${error ? 'border-red-400' : 'border-gray-200'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
+          className={`w-full pr-12 pl-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50 text-center transition-all duration-150 ${error ? 'border-red-400' : 'border-gray-200'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
           value={inputValue}
           onChange={handleInputChange}
           onFocus={handleFocus}
