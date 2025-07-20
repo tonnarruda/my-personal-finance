@@ -536,7 +536,8 @@ const TransactionsPage: React.FC = () => {
       periodoInicio = new Date(selectedMonthYear.year, selectedMonthYear.month - 1, 1);
     }
     
-    const shouldInclude = (
+    // Para transferências, quando há filtro de banco específico, incluir ambas as transações do par
+    let shouldInclude = (
       acc &&
       acc.currency === selectedCurrency &&
       bankMatch &&
@@ -547,15 +548,53 @@ const TransactionsPage: React.FC = () => {
       competence < periodoInicio
     );
 
+    // Se é transferência e há filtro de banco específico, incluir também a transação relacionada
+    if (isTransferTransaction(t) && selectedBank !== '' && !shouldInclude) {
+      // Buscar a transação relacionada (mesmo transfer_id, conta diferente)
+      const relatedTransaction = transactions.find(rt => 
+        rt.transfer_id === t.transfer_id && 
+        rt.account_id === selectedBank &&
+        (considerUnpaidTransactions || rt.is_paid) &&
+        parseDateString(rt.competence_date) && 
+        parseDateString(rt.competence_date)! < periodoInicio!
+      );
+      
+      if (relatedTransaction) {
+        shouldInclude = true;
+      }
+    }
+
     return shouldInclude;
   });
 
   const saldoAnteriorCalc = transacoesParaSaldoAnterior.reduce((acc, t) => {
-    // Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
-    // Se há filtro de conta específica, incluir transferências que afetam essa conta
-    if (isTransferTransaction(t) && selectedBank === '') {
-      return acc;
+    // Para transferências:
+    // - Se não há filtro de conta (todas as contas), transferências não devem afetar o saldo total
+    // - Se há filtro de conta específica, incluir apenas a parte da transferência que afeta essa conta
+    if (isTransferTransaction(t)) {
+      if (selectedBank === '') {
+        // Sem filtro de banco: transferências não afetam o saldo total
+        return acc;
+      } else {
+        // Com filtro de banco: buscar a transação que afeta especificamente a conta selecionada
+        const transactionForSelectedBank = transactions.find(rt => 
+          rt.transfer_id === t.transfer_id && 
+          rt.account_id === selectedBank &&
+          rt.is_paid
+        );
+        
+        if (transactionForSelectedBank) {
+          // Usar o valor da transação que afeta a conta selecionada
+          const valor = transactionForSelectedBank.type === 'income' ? transactionForSelectedBank.amount : -transactionForSelectedBank.amount;
+          return acc + valor;
+        } else {
+          // Fallback: usar a transação original
+          const valor = t.type === 'income' ? t.amount : -t.amount;
+          return acc + valor;
+        }
+      }
     }
+    // Para transações normais, sempre incluir
     return acc + (t.type === 'income' ? t.amount : -t.amount);
   }, 0);
   // Garante que zero seja sempre positivo (evita -0)
