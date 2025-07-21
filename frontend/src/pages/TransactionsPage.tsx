@@ -778,39 +778,22 @@ const TransactionsPage: React.FC = () => {
         throw new Error('Conta não encontrada');
       }
 
-      // Criar transação de saída (débito da conta origem)
-      const sourceTransaction = {
-        user_id: getUser()?.id,
-        description: `Transferência para ${targetAccount.name}`,
-        amount: Math.round((data.amount + data.fees + data.iof) * 100), // Incluir taxas no valor total
-        type: 'transfer',
-        category_id: data.targetAccountId, // Usar ID da conta destino como category_id
-        account_id: data.sourceAccountId,
-        due_date: data.dueDate,
-        competence_date: data.competenceDate,
-        is_paid: true,
+      // Use the proper currency transfer service method
+      const currencyTransferData = {
+        sourceAccountId: data.sourceAccountId,
+        targetAccountId: data.targetAccountId,
+        amount: data.amount,
+        fees: data.fees,
+        iof: data.iof,
+        exchangeRate: data.exchangeRate,
+        convertedAmount: data.convertedAmount,
+        dueDate: data.dueDate,
+        competenceDate: data.competenceDate,
+        description: `Transferência ${sourceAccount.currency} → ${targetAccount.currency}`,
         observation: `Taxa de câmbio: 1 ${sourceAccount.currency} = ${data.exchangeRate} ${targetAccount.currency}\nTarifas: ${data.fees}\nIOF: ${data.iof}`,
       };
 
-      // Criar transação de entrada (crédito na conta destino)
-      const targetTransaction = {
-        user_id: getUser()?.id,
-        description: `Transferência de ${sourceAccount.name}`,
-        amount: Math.round(data.convertedAmount * 100),
-        type: 'transfer',
-        category_id: data.sourceAccountId, // Usar ID da conta origem como category_id
-        account_id: data.targetAccountId,
-        due_date: data.dueDate,
-        competence_date: data.competenceDate,
-        is_paid: true,
-        observation: `Taxa de câmbio: 1 ${sourceAccount.currency} = ${data.exchangeRate} ${targetAccount.currency}`,
-      };
-
-      // Criar as transações
-      await Promise.all([
-        transactionService.createTransaction(sourceTransaction),
-        transactionService.createTransaction(targetTransaction),
-      ]);
+      await transactionService.createCurrencyTransfer(currencyTransferData);
 
       showSuccess('Transferência realizada com sucesso!');
       setShowCurrencyTransferForm(false);
