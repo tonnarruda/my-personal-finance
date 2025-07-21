@@ -15,7 +15,7 @@ import {
   ApiResponse as AccountApiResponse
 } from '../types/account';
 import { Transaction, CreateTransactionRequest } from '../types/transaction';
-import { API_CONFIG } from '../config';
+import { API_CONFIG, EXCHANGE_RATE_CONFIG } from '../config';
 
 const API_BASE_URL = API_CONFIG.BASE_URL;
 
@@ -225,6 +225,19 @@ export const transactionService = {
     return response.data;
   },
 
+
+  // Criar transferência entre moedas
+  createCurrencyTransfer: async (data: any): Promise<Transaction> => {
+    const userId = getUserId();
+    const payload = {
+      ...data,
+      user_id: userId,
+      type: 'currency_transfer'
+    };
+    const response = await api.post<Transaction>(`/transactions/currency-transfer?user_id=${userId}`, payload);
+    return response.data;
+  },
+
   // Buscar todas as transações
   getAllTransactions: async (): Promise<Transaction[]> => {
     const userId = getUserId();
@@ -254,7 +267,7 @@ export const transactionService = {
   deleteTransaction: async (id: string): Promise<void> => {
     const userId = getUserId();
     await api.delete(`/transactions/${id}?user_id=${userId}`);
-  },
+  }
 };
 
 // Função para login
@@ -317,5 +330,28 @@ export async function getOrCreateCategoryByName(name: string, type: CategoryType
   if (!found) throw new Error('Falha ao criar categoria de saldo inicial');
   return found;
 }
+
+// Serviço de câmbio
+export const exchangeRateService = {
+  // Buscar taxa de câmbio atual
+  getExchangeRate: async (fromCurrency: string, toCurrency: string): Promise<number> => {
+    try {
+      const response = await fetch(
+        `${EXCHANGE_RATE_CONFIG.BASE_URL}/latest?from=${fromCurrency}&to=${toCurrency}`
+      );
+      const data = await response.json();
+      
+      if (data.rates && data.rates[toCurrency]) {
+        console.log(`[EXCHANGE] Taxa obtida em: ${data.date}`);
+        return data.rates[toCurrency];
+      } else {
+        throw new Error('Falha ao obter taxa de câmbio');
+      }
+    } catch (error: any) {
+      console.error('[EXCHANGE] Erro ao buscar taxa de câmbio:', error);
+      throw new Error('Erro ao buscar taxa de câmbio. Por favor, tente novamente.');
+    }
+  }
+};
 
 export default api; 

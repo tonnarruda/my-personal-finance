@@ -11,6 +11,7 @@ import ModernResultCard from '../components/ModernResultCard';
 import ModernMetrics from '../components/ModernMetrics';
 import TransactionForm from '../components/TransactionForm';
 import AccountForm from '../components/AccountForm';
+import CurrencyTransferForm from '../components/CurrencyTransferForm';
 import { useToast } from '../contexts/ToastContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import { CreateAccountRequest } from '../types/account';
@@ -35,6 +36,13 @@ const DashboardPage: React.FC = () => {
   // Account modal state
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [accountModalLoading, setAccountModalLoading] = useState(false);
+
+  // Currency transfer modal state
+  const [showCurrencyTransferForm, setShowCurrencyTransferForm] = useState(false);
+  
+  // Transfer dropdown state
+  const [showTransferDropdown, setShowTransferDropdown] = useState(false);
+  const [transferDropdownPosition, setTransferDropdownPosition] = useState({ top: 0, left: 0 });
   
   // Estado para controlar se devem mostrar contas com saldo zerado
   const [hideZeroBalanceAccounts, setHideZeroBalanceAccounts] = useState(() => {
@@ -120,6 +128,9 @@ const DashboardPage: React.FC = () => {
     accountsByCurrency[acc.currency].push(acc);
   });
   const currencies = Object.keys(accountsByCurrency);
+  
+  // Verificar se existem múltiplas moedas para mostrar a opção de transferência entre moedas
+  const hasMultipleCurrencies = currencies.length > 1;
 
   // Filtra transações do mês atual e moeda selecionada
   const now = new Date();
@@ -332,7 +343,38 @@ const DashboardPage: React.FC = () => {
   const handleOpenTransferModal = () => {
     setModalType('transfer');
     setIsModalOpen(true);
+    setShowTransferDropdown(false);
   };
+
+  const handleOpenCurrencyTransferModal = () => {
+    setShowCurrencyTransferForm(true);
+    setShowTransferDropdown(false);
+  };
+
+  const handleTransferClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const button = e.currentTarget;
+    const rect = button.getBoundingClientRect();
+    setTransferDropdownPosition({
+      top: rect.bottom + window.scrollY,
+      left: rect.left + window.scrollX
+    });
+    setShowTransferDropdown(!showTransferDropdown);
+  };
+
+  // Fechar dropdown quando clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showTransferDropdown) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('.transfer-dropdown') && !target.closest('.transfer-button')) {
+          setShowTransferDropdown(false);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showTransferDropdown]);
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
@@ -439,6 +481,17 @@ const DashboardPage: React.FC = () => {
     }
   };
 
+  const handleCurrencyTransferSubmit = async (data: any) => {
+    try {
+      await transactionService.createCurrencyTransfer(data);
+      showSuccess('Transferência entre moedas realizada com sucesso!');
+      setShowCurrencyTransferForm(false);
+      setReloadFlag(prev => prev + 1);
+    } catch (error) {
+      showError('Erro ao realizar transferência entre moedas');
+    }
+  };
+
   return (
     <Layout>
       <div className={`p-4 sm:p-6 lg:p-8 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
@@ -489,12 +542,42 @@ const DashboardPage: React.FC = () => {
               <span className="text-3xl text-green-600 mb-2">&#43;</span>
               <span className="text-gray-700 text-base font-medium">RECEITA</span>
             </button>
-            <button onClick={handleOpenTransferModal} className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl px-6 py-0 shadow-sm hover:bg-gray-100 transition">
-              <span className="text-2xl text-gray-500 mb-2">
-                <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M7 12h10M16 9l3 3-3 3" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </span>
-              <span className="text-gray-700 text-base font-medium">TRANSFERÊNCIA</span>
-            </button>
+            <div className="relative flex">
+              <button 
+                onClick={hasMultipleCurrencies ? handleTransferClick : handleOpenTransferModal}
+                className="transfer-button flex-1 flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl px-6 py-0 shadow-sm hover:bg-gray-100 transition"
+              >
+                <span className="text-2xl text-gray-500 mb-2">
+                  <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M7 12h10M16 9l3 3-3 3" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </span>
+                <span className="text-gray-700 text-base font-medium">TRANSFERÊNCIA</span>
+              </button>
+              {showTransferDropdown && hasMultipleCurrencies && (
+                <div 
+                  className="transfer-dropdown absolute z-50 mt-2 w-56 rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                  style={{ 
+                    top: '100%',
+                    left: '50%',
+                    transform: 'translateX(-50%)'
+                  }}
+                >
+                  <div className="py-1">
+                    <button
+                      onClick={handleOpenTransferModal}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-900"
+                    >
+                      Transferência entre contas
+                    </button>
+                    <button
+                      onClick={handleOpenCurrencyTransferModal}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-900"
+                    >
+                      Transferência entre moedas
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             <button className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl px-6 py-0 shadow-sm hover:bg-blue-50 transition">
               <span className="text-2xl text-blue-600 mb-2">
                 <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2"/><path d="M8 12h8M12 8v8" stroke="#2563eb" strokeWidth="2" strokeLinecap="round"/></svg>
@@ -682,6 +765,25 @@ const DashboardPage: React.FC = () => {
         </div>
       )}
       
+      {/* Currency Transfer Modal */}
+      {showCurrencyTransferForm && (
+        <div className={`fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4 ${!isCollapsed ? 'lg:pl-64' : 'lg:pl-20'}`}>
+          <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto relative">
+            <button
+              onClick={() => setShowCurrencyTransferForm(false)}
+              className="absolute top-6 right-8 text-gray-400 hover:text-gray-600 text-3xl"
+              title="Fechar"
+            >
+              &times;
+            </button>
+            <CurrencyTransferForm
+              onSubmit={handleCurrencyTransferSubmit}
+              onCancel={() => setShowCurrencyTransferForm(false)}
+              isLoading={false}
+            />
+          </div>
+        </div>
+      )}
 
     </Layout>
   );
