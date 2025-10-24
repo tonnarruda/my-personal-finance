@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/joho/godotenv"
 	"github.com/tonnarruda/my-personal-finance/database"
 	"github.com/tonnarruda/my-personal-finance/handlers"
 	"github.com/tonnarruda/my-personal-finance/routes"
@@ -37,6 +38,14 @@ func runMigrations(db *database.Database) error {
 }
 
 func main() {
+	// Carregar variáveis de ambiente do arquivo .env
+	if err := godotenv.Load(); err != nil {
+		log.Printf("❌ Erro ao carregar .env: %v", err)
+		log.Println("Usando variáveis de ambiente do sistema")
+	} else {
+		log.Println("✅ Arquivo .env carregado com sucesso")
+	}
+
 	// Configurações do banco de dados PostgreSQL
 	dbConfig := database.DatabaseConfig{
 		Host:     getEnv("DB_HOST", "localhost"),
@@ -46,6 +55,15 @@ func main() {
 		DBName:   getEnv("DB_NAME", "my_finance"),
 		SSLMode:  getEnv("DB_SSLMODE", "disable"),
 	}
+
+	// Log das configurações para debug
+	log.Printf("🔧 Configurações do banco:")
+	log.Printf("   Host: %s", dbConfig.Host)
+	log.Printf("   Port: %s", dbConfig.Port)
+	log.Printf("   User: %s", dbConfig.User)
+	log.Printf("   Password: %s", "***")
+	log.Printf("   DBName: %s", dbConfig.DBName)
+	log.Printf("   SSLMode: %s", dbConfig.SSLMode)
 
 	// Inicializar banco de dados
 	db, err := database.NewDatabase(dbConfig)

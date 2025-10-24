@@ -197,24 +197,60 @@ func (d *Database) GetAllCategories(userID string) ([]structs.Category, error) {
 	var categories []structs.Category
 	for rows.Next() {
 		var category structs.Category
+		var description, color, icon, parentID, userID sql.NullString
+		var deletedAt sql.NullTime
+
 		err := rows.Scan(
 			&category.ID,
 			&category.Name,
-			&category.Description,
+			&description,
 			&category.Type,
-			&category.Color,
-			&category.Icon,
-			&category.ParentID,
+			&color,
+			&icon,
+			&parentID,
 			&category.IsActive,
 			&category.Visible,
 			&category.CreatedAt,
 			&category.UpdatedAt,
-			&category.DeletedAt,
-			&category.UserID,
+			&deletedAt,
+			&userID,
 		)
 		if err != nil {
 			return nil, err
 		}
+
+		// Tratar valores NULL
+		if description.Valid {
+			category.Description = description.String
+		} else {
+			category.Description = ""
+		}
+		if color.Valid {
+			category.Color = color.String
+		} else {
+			category.Color = ""
+		}
+		if icon.Valid {
+			category.Icon = icon.String
+		} else {
+			category.Icon = ""
+		}
+		if parentID.Valid {
+			category.ParentID = &parentID.String
+		} else {
+			category.ParentID = nil
+		}
+		if deletedAt.Valid {
+			category.DeletedAt = &deletedAt.Time
+		} else {
+			category.DeletedAt = nil
+		}
+		if userID.Valid {
+			category.UserID = userID.String
+		} else {
+			category.UserID = ""
+		}
+
 		categories = append(categories, category)
 	}
 
@@ -235,24 +271,60 @@ func (d *Database) GetCategoriesByType(userID string, categoryType structs.Categ
 	var categories []structs.Category
 	for rows.Next() {
 		var category structs.Category
+		var description, color, icon, parentID, userID sql.NullString
+		var deletedAt sql.NullTime
+
 		err := rows.Scan(
 			&category.ID,
 			&category.Name,
-			&category.Description,
+			&description,
 			&category.Type,
-			&category.Color,
-			&category.Icon,
-			&category.ParentID,
+			&color,
+			&icon,
+			&parentID,
 			&category.IsActive,
 			&category.Visible,
 			&category.CreatedAt,
 			&category.UpdatedAt,
-			&category.DeletedAt,
-			&category.UserID,
+			&deletedAt,
+			&userID,
 		)
 		if err != nil {
 			return nil, err
 		}
+
+		// Tratar valores NULL
+		if description.Valid {
+			category.Description = description.String
+		} else {
+			category.Description = ""
+		}
+		if color.Valid {
+			category.Color = color.String
+		} else {
+			category.Color = ""
+		}
+		if icon.Valid {
+			category.Icon = icon.String
+		} else {
+			category.Icon = ""
+		}
+		if parentID.Valid {
+			category.ParentID = &parentID.String
+		} else {
+			category.ParentID = nil
+		}
+		if deletedAt.Valid {
+			category.DeletedAt = &deletedAt.Time
+		} else {
+			category.DeletedAt = nil
+		}
+		if userID.Valid {
+			category.UserID = userID.String
+		} else {
+			category.UserID = ""
+		}
+
 		categories = append(categories, category)
 	}
 

@@ -48,6 +48,28 @@ const TransactionsPage: React.FC = () => {
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
   const { showSuccess, showError } = useToast();
   
+  // Função para atualizar o status da transação
+  const toggleTransactionStatus = async (transaction: Transaction) => {
+    try {
+      const newStatus = !transaction.is_paid;
+      await transactionService.updateTransaction(transaction.id!, { is_paid: newStatus });
+      
+      // Atualizar a lista local de transações
+      setTransactions(prev => 
+        prev.map(t => 
+          t.id === transaction.id 
+            ? { ...t, is_paid: newStatus }
+            : t
+        )
+      );
+      
+      showSuccess(newStatus ? 'Transação marcada como paga!' : 'Transação marcada como pendente!');
+    } catch (error) {
+      console.error('Erro ao atualizar status da transação:', error);
+      showError('Erro ao atualizar status da transação');
+    }
+  };
+  
   // Estados para o menu flutuante
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const [isCustomDateRange, setIsCustomDateRange] = useState(false);
@@ -1136,9 +1158,13 @@ const TransactionsPage: React.FC = () => {
                             {(() => {
                               const status = getTransactionStatus(t);
                               return (
-                                <span className={`text-xs font-semibold rounded px-2 py-0.5 ${status.className}`}>
+                                <button
+                                  onClick={() => toggleTransactionStatus(t)}
+                                  className={`text-xs font-semibold rounded px-2 py-0.5 cursor-pointer transition-all hover:opacity-80 ${status.className}`}
+                                  title="Clique para alterar o status"
+                                >
                                   {status.text}
-                                </span>
+                                </button>
                               );
                             })()}
                           </td>

@@ -32,11 +32,12 @@ func (d *Database) CreateAccount(account structs.Account) error {
 func (d *Database) GetAccountByID(id string, userID string) (*structs.Account, error) {
 	query := `SELECT id, currency, name, color, type, is_active, created_at, updated_at, deleted_at, user_id FROM accounts WHERE id = $1 AND user_id = $2`
 	var account structs.Account
+	var color sql.NullString
 	err := d.db.QueryRow(query, id, userID).Scan(
 		&account.ID,
 		&account.Currency,
 		&account.Name,
-		&account.Color,
+		&color,
 		&account.Type,
 		&account.IsActive,
 		&account.CreatedAt,
@@ -50,6 +51,14 @@ func (d *Database) GetAccountByID(id string, userID string) (*structs.Account, e
 		}
 		return nil, err
 	}
+	
+	// Tratar valor NULL para color
+	if color.Valid {
+		account.Color = color.String
+	} else {
+		account.Color = ""
+	}
+	
 	return &account, nil
 }
 
@@ -64,11 +73,12 @@ func (d *Database) GetAllAccounts(userID string) ([]structs.Account, error) {
 	var accounts []structs.Account
 	for rows.Next() {
 		var account structs.Account
+		var color sql.NullString
 		err := rows.Scan(
 			&account.ID,
 			&account.Currency,
 			&account.Name,
-			&account.Color,
+			&color,
 			&account.Type,
 			&account.IsActive,
 			&account.CreatedAt,
@@ -79,6 +89,14 @@ func (d *Database) GetAllAccounts(userID string) ([]structs.Account, error) {
 		if err != nil {
 			return nil, err
 		}
+		
+		// Tratar valor NULL para color
+		if color.Valid {
+			account.Color = color.String
+		} else {
+			account.Color = ""
+		}
+		
 		accounts = append(accounts, account)
 	}
 	return accounts, nil
