@@ -30,4 +30,7 @@ export interface CreateTransactionRequest {
   observation?: string;
   is_paid?: boolean;
   transfer_id?: string;
+  // Campos para taxa manual
+  use_manual_rate?: boolean;
+  manual_rate?: number;
 } 

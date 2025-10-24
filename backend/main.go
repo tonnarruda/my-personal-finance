@@ -83,15 +83,20 @@ func main() {
 	accountService := services.NewAccountService(db, transactionCreator)
 	userService := services.NewUserService(db)
 
+	// Inicializar serviço de câmbio
+	exchangeService := services.NewMockExchangeService() // Usar mock para desenvolvimento
+	// Para produção, usar: services.NewExchangeService(os.Getenv("EXCHANGE_API_KEY"))
+
 	// Inicializar handlers
 	categoryHandler := handlers.NewCategoryHandler(categoryService)
 	accountHandler := handlers.NewAccountHandler(accountService)
 	authHandler := handlers.NewAuthHandler(userService)
-	transactionHandler := &handlers.TransactionHandler{DB: db}
+	transactionHandler := &handlers.TransactionHandler{DB: db, ExchangeService: exchangeService}
+	exchangeHandler := handlers.NewExchangeHandler(exchangeService)
 	keepAliveHandler := handlers.NewKeepAliveHandler()
 
 	// Configurar rotas
-	router := routes.SetupRoutes(categoryHandler, accountHandler, authHandler, transactionHandler, keepAliveHandler)
+	router := routes.SetupRoutes(categoryHandler, accountHandler, authHandler, transactionHandler, exchangeHandler, keepAliveHandler)
 
 	// Configurar porta do servidor
 	port := getEnv("PORT", "8080")

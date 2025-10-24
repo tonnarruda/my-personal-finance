@@ -8,15 +8,24 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/tonnarruda/my-personal-finance/database"
+	"github.com/tonnarruda/my-personal-finance/services"
 	"github.com/tonnarruda/my-personal-finance/structs"
 )
 
 type TransactionHandler struct {
-	DB *database.Database
+	DB              *database.Database
+	ExchangeService services.ExchangeServiceInterface
 }
 
 // CreateTransaction cria uma nova transação
 func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
+	// Obter user_id do query parameter
+	userID := c.Query("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id é obrigatório"})
+		return
+	}
+
 	var req structs.Transaction
 	if err := c.ShouldBindJSON(&req); err != nil {
 		fmt.Println("DECODE ERROR:", err)
@@ -25,6 +34,7 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	}
 
 	// Preencher campos obrigatórios
+	req.UserID = userID
 	if req.ID == "" {
 		req.ID = uuid.New().String()
 	}
@@ -33,10 +43,34 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	}
 	req.UpdatedAt = time.Now()
 
+	// Debug: verificar campos recebidos
+	fmt.Printf("DEBUG Backend - Campos recebidos: UseManualRate=%v, ManualRate=%v\n", req.UseManualRate, req.ManualRate)
+
 	// Verificar se é uma transferência
 	if req.Type == "transfer" {
 		// Para transferências, category_id contém o ID da conta destino
 		destAccountID := req.CategoryID
+
+		// Buscar as contas de origem e destino
+		originAccount, err := h.DB.GetAccountByID(req.AccountID, req.UserID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get origin account", "details": err.Error()})
+			return
+		}
+		if originAccount == nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Origin account not found"})
+			return
+		}
+
+		destAccount, err := h.DB.GetAccountByID(destAccountID, req.UserID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get destination account", "details": err.Error()})
+			return
+		}
+		if destAccount == nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Destination account not found"})
+			return
+		}
 
 		// Buscar ou criar a categoria "Transferência"
 		transferCategory, err := h.DB.EnsureTransferCategory()
@@ -47,6 +81,47 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 
 		// Gerar ID único para vincular as duas transações
 		transferID := uuid.New().String()
+
+		// Calcular valor convertido se as moedas forem diferentes
+		var convertedAmount int
+		var exchangeRate float64 = 1.0
+		var exchangeInfo *services.ExchangeRateResponse
+
+		if originAccount.Currency != destAccount.Currency {
+			// Verificar se deve usar taxa manual
+			if req.UseManualRate != nil && *req.UseManualRate && req.ManualRate != nil {
+				// Usar taxa manual
+				exchangeRate = *req.ManualRate
+				amountInCurrency := float64(req.Amount) / 100.0
+				convertedAmount = int(amountInCurrency * exchangeRate * 100)
+			} else {
+				// Usar API de câmbio
+				amountInCurrency := float64(req.Amount) / 100.0
+
+				exchangeInfo, err = h.ExchangeService.GetExchangeRate(originAccount.Currency, destAccount.Currency, amountInCurrency)
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get exchange rate", "details": err.Error()})
+					return
+				}
+
+				// Converter o valor convertido de volta para centavos
+				convertedAmount = int(exchangeInfo.ConversionResult * 100)
+				exchangeRate = exchangeInfo.ConversionRate
+			}
+		} else {
+			convertedAmount = req.Amount
+		}
+
+		// Criar observação com informações de câmbio se aplicável
+		observation := req.Observation
+		if originAccount.Currency != destAccount.Currency {
+			exchangeInfo := fmt.Sprintf("Câmbio: %.4f %s/%s", exchangeRate, originAccount.Currency, destAccount.Currency)
+			if observation != "" {
+				observation = observation + " | " + exchangeInfo
+			} else {
+				observation = exchangeInfo
+			}
+		}
 
 		// Criar transação de débito na conta origem
 		debitTx := structs.Transaction{
@@ -60,7 +135,7 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 			DueDate:             req.DueDate,
 			CompetenceDate:      req.CompetenceDate,
 			IsPaid:              req.IsPaid,
-			Observation:         req.Observation,
+			Observation:         observation,
 			IsRecurring:         req.IsRecurring,
 			RecurringType:       req.RecurringType,
 			Installments:        req.Installments,
@@ -76,14 +151,14 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 			ID:                  uuid.New().String(),
 			UserID:              req.UserID,
 			Description:         req.Description,
-			Amount:              req.Amount,
+			Amount:              convertedAmount, // Valor convertido
 			Type:                "income",
 			CategoryID:          transferCategory.ID,
 			AccountID:           destAccountID, // Conta destino
 			DueDate:             req.DueDate,
 			CompetenceDate:      req.CompetenceDate,
 			IsPaid:              req.IsPaid,
-			Observation:         req.Observation,
+			Observation:         observation,
 			IsRecurring:         req.IsRecurring,
 			RecurringType:       req.RecurringType,
 			Installments:        req.Installments,
@@ -105,12 +180,26 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 			return
 		}
 
-		// Retornar as duas transações criadas
-		c.JSON(http.StatusCreated, gin.H{
+		// Preparar resposta com informações de câmbio
+		response := gin.H{
 			"debit_transaction":  debitTx,
 			"credit_transaction": creditTx,
 			"transfer_id":        transferID,
-		})
+		}
+
+		// Adicionar informações de câmbio se aplicável
+		if originAccount.Currency != destAccount.Currency {
+			response["exchange_info"] = gin.H{
+				"from_currency":    originAccount.Currency,
+				"to_currency":      destAccount.Currency,
+				"exchange_rate":    exchangeRate,
+				"original_amount":  req.Amount,
+				"converted_amount": convertedAmount,
+			}
+		}
+
+		// Retornar as duas transações criadas
+		c.JSON(http.StatusCreated, response)
 	} else {
 		// Lógica normal para transações que não são transferências
 		if err := h.DB.CreateTransaction(req); err != nil {

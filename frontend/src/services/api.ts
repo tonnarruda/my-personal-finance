@@ -217,11 +217,7 @@ export const transactionService = {
   // Criar transação
   createTransaction: async (data: any): Promise<Transaction> => {
     const userId = getUserId();
-    const payload = {
-      ...data,
-      user_id: userId
-    };
-    const response = await api.post<Transaction>(`/transactions?user_id=${userId}`, payload);
+    const response = await api.post<Transaction>(`/transactions?user_id=${userId}`, data);
     return response.data;
   },
 
@@ -254,6 +250,25 @@ export const transactionService = {
   deleteTransaction: async (id: string): Promise<void> => {
     const userId = getUserId();
     await api.delete(`/transactions/${id}?user_id=${userId}`);
+  },
+};
+
+// Serviço de câmbio
+export const exchangeService = {
+  // Obter taxa de câmbio com conversão de valor
+  getExchangeRate: async (fromCurrency: string, toCurrency: string, amount: number) => {
+    const response = await api.post('/exchange/rate', {
+      from_currency: fromCurrency,
+      to_currency: toCurrency,
+      amount: amount
+    });
+    return response.data;
+  },
+
+  // Obter apenas a taxa de câmbio
+  getExchangeRateSimple: async (fromCurrency: string, toCurrency: string) => {
+    const response = await api.get(`/exchange/rate/simple?from=${fromCurrency}&to=${toCurrency}`);
+    return response.data;
   },
 };
 
