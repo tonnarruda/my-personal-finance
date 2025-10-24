@@ -1,6 +1,11 @@
 package database
 
 import (
+	"database/sql"
+	"fmt"
+	"strings"
+	"time"
+
 	"github.com/tonnarruda/my-personal-finance/structs"
 )
 
@@ -40,7 +45,11 @@ func (d *Database) CreateTransaction(tx structs.Transaction) error {
 // GetTransactionByID busca uma transação pelo ID e userID
 func (d *Database) GetTransactionByID(id string, userID string) (*structs.Transaction, error) {
 	query := `SELECT id, user_id, description, amount, type, category_id, account_id, due_date, competence_date, is_paid, observation, is_recurring, recurring_type, installments, current_installment, parent_transaction_id, transfer_id, created_at, updated_at, deleted_at FROM transactions WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`
+
 	var tx structs.Transaction
+	var observation, recurringType, parentTransactionID, transferID sql.NullString
+	var deletedAt sql.NullTime
+
 	err := d.db.QueryRow(query, id, userID).Scan(
 		&tx.ID,
 		&tx.UserID,
@@ -52,16 +61,16 @@ func (d *Database) GetTransactionByID(id string, userID string) (*structs.Transa
 		&tx.DueDate,
 		&tx.CompetenceDate,
 		&tx.IsPaid,
-		&tx.Observation,
+		&observation,
 		&tx.IsRecurring,
-		&tx.RecurringType,
+		&recurringType,
 		&tx.Installments,
 		&tx.CurrentInstallment,
-		&tx.ParentTransactionID,
-		&tx.TransferID,
+		&parentTransactionID,
+		&transferID,
 		&tx.CreatedAt,
 		&tx.UpdatedAt,
-		&tx.DeletedAt,
+		&deletedAt,
 	)
 	if err != nil {
 		if err.Error() == "sql: no rows in result set" {
@@ -69,6 +78,38 @@ func (d *Database) GetTransactionByID(id string, userID string) (*structs.Transa
 		}
 		return nil, err
 	}
+
+	// Atribuir valores NULL corretamente
+	if observation.Valid {
+		tx.Observation = observation.String
+	} else {
+		tx.Observation = ""
+	}
+
+	if recurringType.Valid {
+		tx.RecurringType = &recurringType.String
+	} else {
+		tx.RecurringType = nil
+	}
+
+	if parentTransactionID.Valid {
+		tx.ParentTransactionID = &parentTransactionID.String
+	} else {
+		tx.ParentTransactionID = nil
+	}
+
+	if transferID.Valid {
+		tx.TransferID = &transferID.String
+	} else {
+		tx.TransferID = nil
+	}
+
+	if deletedAt.Valid {
+		tx.DeletedAt = &deletedAt.Time
+	} else {
+		tx.DeletedAt = nil
+	}
+
 	return &tx, nil
 }
 
@@ -80,9 +121,14 @@ func (d *Database) GetAllTransactionsByUser(userID string) ([]structs.Transactio
 		return nil, err
 	}
 	defer rows.Close()
-	var txs []structs.Transaction
+
+	// Inicializar com slice vazio para garantir que nunca seja nil
+	txs := make([]structs.Transaction, 0)
 	for rows.Next() {
 		var tx structs.Transaction
+		var observation, recurringType, parentTransactionID, transferID sql.NullString
+		var deletedAt sql.NullTime
+
 		err := rows.Scan(
 			&tx.ID,
 			&tx.UserID,
@@ -94,20 +140,48 @@ func (d *Database) GetAllTransactionsByUser(userID string) ([]structs.Transactio
 			&tx.DueDate,
 			&tx.CompetenceDate,
 			&tx.IsPaid,
-			&tx.Observation,
+			&observation,
 			&tx.IsRecurring,
-			&tx.RecurringType,
+			&recurringType,
 			&tx.Installments,
 			&tx.CurrentInstallment,
-			&tx.ParentTransactionID,
-			&tx.TransferID,
+			&parentTransactionID,
+			&transferID,
 			&tx.CreatedAt,
 			&tx.UpdatedAt,
-			&tx.DeletedAt,
+			&deletedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
+
+		// Tratar valores NULL
+		if observation.Valid {
+			tx.Observation = observation.String
+		} else {
+			tx.Observation = ""
+		}
+		if recurringType.Valid {
+			tx.RecurringType = &recurringType.String
+		} else {
+			tx.RecurringType = nil
+		}
+		if parentTransactionID.Valid {
+			tx.ParentTransactionID = &parentTransactionID.String
+		} else {
+			tx.ParentTransactionID = nil
+		}
+		if transferID.Valid {
+			tx.TransferID = &transferID.String
+		} else {
+			tx.TransferID = nil
+		}
+		if deletedAt.Valid {
+			tx.DeletedAt = &deletedAt.Time
+		} else {
+			tx.DeletedAt = nil
+		}
+
 		txs = append(txs, tx)
 	}
 	return txs, nil
@@ -137,6 +211,34 @@ func (d *Database) UpdateTransaction(id string, userID string, tx structs.Transa
 		id,
 		userID,
 	)
+	return err
+}
+
+// UpdateTransactionPartial atualiza apenas campos específicos de uma transação
+func (d *Database) UpdateTransactionPartial(id string, userID string, updates map[string]interface{}) error {
+	if len(updates) == 0 {
+		return fmt.Errorf("no fields to update")
+	}
+
+	// Adicionar updated_at automaticamente
+	updates["updated_at"] = time.Now()
+
+	// Construir a query dinamicamente
+	setParts := []string{}
+	args := []interface{}{}
+	argIndex := 1
+
+	for field, value := range updates {
+		setParts = append(setParts, fmt.Sprintf("%s=$%d", field, argIndex))
+		args = append(args, value)
+		argIndex++
+	}
+
+	query := fmt.Sprintf("UPDATE transactions SET %s WHERE id=$%d AND user_id=$%d",
+		strings.Join(setParts, ", "), argIndex, argIndex+1)
+	args = append(args, id, userID)
+
+	_, err := d.db.Exec(query, args...)
 	return err
 }
 

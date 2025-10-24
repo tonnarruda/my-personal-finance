@@ -133,6 +133,18 @@ func (h *TransactionHandler) GetAllTransactions(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Garantir que sempre retorne um array, mesmo que vazio
+	if txs == nil {
+		txs = []structs.Transaction{}
+	}
+
+	// Forçar serialização como array vazio se não há transações
+	if len(txs) == 0 {
+		c.JSON(http.StatusOK, []structs.Transaction{})
+		return
+	}
+
 	c.JSON(http.StatusOK, txs)
 }
 
@@ -164,17 +176,32 @@ func (h *TransactionHandler) UpdateTransaction(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "id and user_id are required"})
 		return
 	}
-	var req structs.Transaction
-	if err := c.ShouldBindJSON(&req); err != nil {
+
+	// Usar map para permitir updates parciais
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
-	req.UpdatedAt = time.Now()
-	if err := h.DB.UpdateTransaction(id, userID, req); err != nil {
+
+	// Remover campos que não devem ser atualizados diretamente
+	delete(updates, "id")
+	delete(updates, "user_id")
+	delete(updates, "created_at")
+
+	if err := h.DB.UpdateTransactionPartial(id, userID, updates); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, req)
+
+	// Buscar a transação atualizada para retornar
+	updatedTx, err := h.DB.GetTransactionByID(id, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch updated transaction"})
+		return
+	}
+
+	c.JSON(http.StatusOK, updatedTx)
 }
 
 // DeleteTransaction remove uma transação
