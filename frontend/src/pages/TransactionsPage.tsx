@@ -375,6 +375,9 @@ const TransactionsPage: React.FC = () => {
       installments: obj.installments,
       current_installment: obj.current_installment,
       parent_transaction_id: obj.parent_transaction_id,
+      // Campos para taxa manual
+      use_manual_rate: obj.use_manual_rate,
+      manual_rate: obj.manual_rate,
     };
   }
 
@@ -387,19 +390,20 @@ const TransactionsPage: React.FC = () => {
       return dateStr;
     }
     
-    // Se está no formato YYYY-MM-DD, adiciona T00:00:00Z
+    // Se está no formato YYYY-MM-DD, adiciona T03:00:00Z (horário de Brasília)
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-      return `${dateStr}T00:00:00Z`;
+      return `${dateStr}T03:00:00Z`;
     }
     
-    // Para outros formatos, converte para Date e depois para ISO
+    // Para outros formatos, converte para Date e depois para ISO com timezone de Brasília
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) {
       return '';
     }
     
-    // Formata para YYYY-MM-DDTHH:mm:ss.sssZ
-    return date.toISOString();
+    // Adiciona 3 horas para compensar o timezone de Brasília (UTC-3)
+    const brasiliaDate = new Date(date.getTime() + (3 * 60 * 60 * 1000));
+    return brasiliaDate.toISOString();
   }
 
   const handleSubmitForm = async (data: any) => {

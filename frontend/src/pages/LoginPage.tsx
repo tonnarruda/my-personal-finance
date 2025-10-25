@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../services/api';
-import { setUser } from '../services/auth';
+import { setUser, isAuthenticated, getUser, getAuthToken } from '../services/auth';
 import { useToast } from '../contexts/ToastContext';
 
 const LoginPage: React.FC = () => {
@@ -34,7 +34,8 @@ const LoginPage: React.FC = () => {
       setUser(user);
       
       console.log('[LOGIN] Redirecionando para dashboard...');
-      navigate('/dashboard');
+      // Usar window.location.href para forçar redirecionamento
+      window.location.href = '/dashboard';
     } catch (err: any) {
       console.error('[LOGIN] Erro no login:', err);
       console.error('[LOGIN] Detalhes do erro:', err?.response?.data);

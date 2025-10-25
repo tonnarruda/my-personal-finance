@@ -217,6 +217,11 @@ export const transactionService = {
   // Criar transação
   createTransaction: async (data: any): Promise<Transaction> => {
     const userId = getUserId();
+    console.log('DEBUG API - createTransaction:', {
+      userId,
+      data,
+      url: `/transactions?user_id=${userId}`
+    });
     const response = await api.post<Transaction>(`/transactions?user_id=${userId}`, data);
     return response.data;
   },

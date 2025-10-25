@@ -88,7 +88,6 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
   } | null>(null);
   const [loadingExchange, setLoadingExchange] = useState(false);
   const [manualRate, setManualRate] = useState<string>('');
-  const [useManualRate, setUseManualRate] = useState(false);
 
 
   useEffect(() => {
@@ -152,7 +151,7 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
     }
   }, [currency, accounts, form.account_id]);
 
-  // Buscar taxa de câmbio para transferências entre moedas diferentes
+  // Calcular taxa de câmbio manual para transferências entre moedas diferentes
   useEffect(() => {
     if (form.type === 'transfer' && form.account_id && form.category_id && form.amount > 0) {
       const originAccount = accounts.find(acc => acc.id === form.account_id);
@@ -160,14 +159,14 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
       
       if (originAccount && destAccount && originAccount.currency !== destAccount.currency) {
         // O form.amount já está em valor real, não em centavos
-        fetchExchangeRate(originAccount.currency, destAccount.currency, form.amount);
+        calculateManualExchange(originAccount.currency, destAccount.currency, form.amount);
       } else {
         setExchangeInfo(null);
       }
     } else {
       setExchangeInfo(null);
     }
-  }, [form.type, form.account_id, form.category_id, form.amount, accounts, useManualRate, manualRate]);
+  }, [form.type, form.account_id, form.category_id, form.amount, accounts, manualRate]);
 
   // Handler para ESC
   useEffect(() => {
@@ -197,15 +196,15 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
     }
   };
 
-  // Função para buscar taxa de câmbio
-  const fetchExchangeRate = async (fromCurrency: string, toCurrency: string, amount: number) => {
+  // Função para calcular taxa de câmbio manual
+  const calculateManualExchange = (fromCurrency: string, toCurrency: string, amount: number) => {
     if (fromCurrency === toCurrency || amount <= 0) {
       setExchangeInfo(null);
       return;
     }
 
-    // Se está usando taxa manual, calcular localmente
-    if (useManualRate && manualRate) {
+    // Sempre usar taxa manual para transferências entre moedas diferentes
+    if (manualRate) {
       const rate = parseFloat(manualRate);
       if (!isNaN(rate) && rate > 0) {
         const convertedAmount = amount * rate;
@@ -218,23 +217,8 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
       } else {
         setExchangeInfo(null);
       }
-      return;
-    }
-
-    setLoadingExchange(true);
-    try {
-      const response = await exchangeService.getExchangeRate(fromCurrency, toCurrency, amount);
-      setExchangeInfo({
-        rate: response.conversion_rate,
-        convertedAmount: response.conversion_result,
-        fromCurrency,
-        toCurrency
-      });
-    } catch (error) {
-      console.error('Erro ao buscar taxa de câmbio:', error);
+    } else {
       setExchangeInfo(null);
-    } finally {
-      setLoadingExchange(false);
     }
   };
 
@@ -259,6 +243,24 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
     } else {
       if (!form.category_id) newErrors.category_id = 'Categoria obrigatória';
     }
+    
+    // Validar taxa manual para transferências entre moedas diferentes
+    if (form.type === 'transfer' && form.account_id && form.category_id) {
+      const originAccount = accounts.find(acc => acc.id === form.account_id);
+      const destAccount = accounts.find(acc => acc.id === form.category_id);
+      
+      if (originAccount && destAccount && originAccount.currency !== destAccount.currency) {
+        if (!manualRate || manualRate.trim() === '') {
+          newErrors.manualRate = 'Taxa de câmbio obrigatória para transferências entre moedas diferentes';
+        } else {
+          const rate = parseFloat(manualRate);
+          if (isNaN(rate) || rate <= 0) {
+            newErrors.manualRate = 'Taxa de câmbio deve ser um número maior que zero';
+          }
+        }
+      }
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -297,25 +299,40 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    console.log('DEBUG Frontend - Antes da validação:', {
+      type: form.type,
+      manualRate,
+      account_id: form.account_id,
+      category_id: form.category_id
+    });
+    
+    if (!validate()) {
+      console.log('DEBUG Frontend - Validação falhou');
+      return;
+    }
+    
+    console.log('DEBUG Frontend - Validação passou');
     setSubmitting(true);
     try {
       const submitData: CreateTransactionRequest = {
         ...form,
         is_paid: isPaid,
-        // Adicionar campos de taxa manual para transferências
-        use_manual_rate: form.type === 'transfer' ? useManualRate : undefined,
-        manual_rate: form.type === 'transfer' && useManualRate && manualRate ? parseFloat(manualRate) : undefined,
+        // Sempre usar taxa manual para transferências entre moedas diferentes
+        use_manual_rate: form.type === 'transfer' ? true : undefined,
+        manual_rate: form.type === 'transfer' && manualRate && !isNaN(parseFloat(manualRate)) ? parseFloat(manualRate) : undefined,
       };
       
       console.log('DEBUG Frontend - Dados enviados:', {
         type: form.type,
-        useManualRate,
         manualRate,
+        isTransfer: form.type === 'transfer',
+        hasManualRate: !!manualRate,
+        isValidNumber: !isNaN(parseFloat(manualRate)),
         submitData: {
           use_manual_rate: submitData.use_manual_rate,
           manual_rate: submitData.manual_rate
-        }
+        },
+        fullSubmitData: submitData
       });
       
       if (onSubmit) onSubmit(submitData);
@@ -480,7 +497,7 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
           </div>
         </div>
 
-        {/* Controles de câmbio para transferências */}
+        {/* Campo de taxa manual para transferências entre moedas diferentes */}
         {form.type === 'transfer' && form.account_id && form.category_id && (() => {
           const originAccount = accounts.find(acc => acc.id === form.account_id);
           const destAccount = accounts.find(acc => acc.id === form.category_id);
@@ -490,41 +507,31 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
           
           return (
             <div className="space-y-3">
-              {/* Toggle para taxa manual */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-700">Usar taxa manual</span>
-                </div>
-                <button
-                  type="button"
-                  className={`w-8 h-5 flex items-center rounded-full transition-colors duration-200 focus:outline-none ${useManualRate ? 'bg-blue-100' : 'bg-gray-200'} ${useManualRate ? 'ring-2 ring-blue-200' : ''}`}
-                  onClick={() => setUseManualRate(!useManualRate)}
-                  aria-pressed={useManualRate}
-                >
-                  <span className={`inline-block w-4 h-4 transform rounded-full shadow transition-transform duration-200 ${useManualRate ? 'translate-x-3 bg-blue-500' : 'bg-white'}`}></span>
-                </button>
+              {/* Campo de taxa manual obrigatório */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Taxa de Câmbio ({originAccount?.currency} → {destAccount?.currency}) *
+                </label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 text-sm ${
+                    errors.manualRate 
+                      ? 'border-red-300 focus:ring-red-200 bg-red-50' 
+                      : 'border-gray-200 focus:ring-blue-200 bg-gray-50'
+                  }`}
+                  placeholder="Ex: 0.1843"
+                  value={manualRate}
+                  onChange={(e) => setManualRate(e.target.value)}
+                />
+                {errors.manualRate && (
+                  <p className="text-xs text-red-500 mt-1">{errors.manualRate}</p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Digite a taxa de câmbio (ex: 0.1843 para 1 BRL = 0.1843 USD)
+                </p>
               </div>
-
-              {/* Campo de taxa manual */}
-              {useManualRate && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Taxa de Câmbio ({originAccount?.currency} → {destAccount?.currency})
-                  </label>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    min="0"
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50 text-sm"
-                    placeholder="Ex: 0.2000"
-                    value={manualRate}
-                    onChange={(e) => setManualRate(e.target.value)}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Digite a taxa de câmbio (ex: 0.2000 para 1 BRL = 0.20 USD)
-                  </p>
-                </div>
-              )}
 
               {/* Informações de câmbio */}
               {exchangeInfo && (
@@ -541,7 +548,7 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
                         {exchangeInfo.rate.toFixed(4)}
                       </p>
                       <p className="text-xs text-blue-700">
-                        {useManualRate ? 'Taxa manual' : 'Taxa atual'}
+                        Taxa manual
                       </p>
                     </div>
                   </div>
@@ -559,14 +566,6 @@ const TransactionForm: React.FC<TransactionFormProps> = (props) => {
           );
         })()}
 
-        {form.type === 'transfer' && loadingExchange && (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-              <span className="ml-2 text-sm text-gray-600">Buscando taxa de câmbio...</span>
-            </div>
-          </div>
-        )}
 
         {/* Quarta linha: Toggles */}
         <div className="space-y-2">
