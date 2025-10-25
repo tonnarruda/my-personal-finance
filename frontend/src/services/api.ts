@@ -258,6 +258,37 @@ export const transactionService = {
   },
 };
 
+export const ofxService = {
+  // Pré-visualizar arquivo OFX
+  previewOFX: async (file: File): Promise<any> => {
+    const userId = getUserId();
+    const formData = new FormData();
+    formData.append('ofx_file', file);
+
+    const response = await api.post(`/ofx/preview?user_id=${userId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  // Importar arquivo OFX
+  importOFX: async (file: File, accountId: string): Promise<any> => {
+    const userId = getUserId();
+    const formData = new FormData();
+    formData.append('ofx_file', file);
+    formData.append('account_id', accountId);
+
+    const response = await api.post(`/ofx/import?user_id=${userId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+};
+
 // Serviço de câmbio
 export const exchangeService = {
   // Obter taxa de câmbio com conversão de valor

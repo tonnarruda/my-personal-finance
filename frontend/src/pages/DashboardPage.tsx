@@ -11,6 +11,7 @@ import ModernResultCard from '../components/ModernResultCard';
 import ModernMetrics from '../components/ModernMetrics';
 import TransactionForm from '../components/TransactionForm';
 import AccountForm from '../components/AccountForm';
+import OFXImportModal from '../components/OFXImportModal';
 import { useToast } from '../contexts/ToastContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import { CreateAccountRequest } from '../types/account';
@@ -35,6 +36,9 @@ const DashboardPage: React.FC = () => {
   // Account modal state
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [accountModalLoading, setAccountModalLoading] = useState(false);
+  
+  // OFX Import modal state
+  const [isOFXModalOpen, setIsOFXModalOpen] = useState(false);
   
   // Estado para controlar se devem mostrar contas com saldo zerado
   const [hideZeroBalanceAccounts, setHideZeroBalanceAccounts] = useState(() => {
@@ -347,6 +351,20 @@ const DashboardPage: React.FC = () => {
     setIsAccountModalOpen(false);
   };
 
+  // OFX Import modal handlers
+  const handleOpenOFXModal = () => {
+    setIsOFXModalOpen(true);
+  };
+
+  const handleCloseOFXModal = () => {
+    setIsOFXModalOpen(false);
+  };
+
+  const handleOFXImportSuccess = () => {
+    // Recarregar dados após importação bem-sucedida
+    setReloadFlag(prev => prev + 1);
+  };
+
   const handleAccountSubmit = async (data: any) => {
     setAccountModalLoading(true);
     try {
@@ -495,7 +513,7 @@ const DashboardPage: React.FC = () => {
               </span>
               <span className="text-gray-700 text-base font-medium">TRANSFERÊNCIA</span>
             </button>
-            <button className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl px-6 py-0 shadow-sm hover:bg-blue-50 transition">
+            <button onClick={handleOpenOFXModal} className="flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl px-6 py-0 shadow-sm hover:bg-blue-50 transition">
               <span className="text-2xl text-blue-600 mb-2">
                 <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#2563eb" strokeWidth="2"/><path d="M8 12h8M12 8v8" stroke="#2563eb" strokeWidth="2" strokeLinecap="round"/></svg>
               </span>
@@ -681,8 +699,15 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
       )}
-      
 
+            {/* OFX Import Modal */}
+            <OFXImportModal
+              isOpen={isOFXModalOpen}
+              onClose={handleCloseOFXModal}
+              accounts={accounts}
+              categories={categories}
+              onImportSuccess={handleOFXImportSuccess}
+            />
     </Layout>
   );
 };

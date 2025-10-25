@@ -93,10 +93,11 @@ func main() {
 	authHandler := handlers.NewAuthHandler(userService)
 	transactionHandler := &handlers.TransactionHandler{DB: db, ExchangeService: exchangeService}
 	exchangeHandler := handlers.NewExchangeHandler(exchangeService)
+	ofxHandler := handlers.NewOFXHandler(db)
 	keepAliveHandler := handlers.NewKeepAliveHandler()
 
 	// Configurar rotas
-	router := routes.SetupRoutes(categoryHandler, accountHandler, authHandler, transactionHandler, exchangeHandler, keepAliveHandler)
+	router := routes.SetupRoutes(categoryHandler, accountHandler, authHandler, transactionHandler, exchangeHandler, ofxHandler, keepAliveHandler)
 
 	// Configurar porta do servidor
 	port := getEnv("PORT", "8080")

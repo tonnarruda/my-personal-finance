@@ -10,7 +10,7 @@ import (
 )
 
 // SetupRoutes configura todas as rotas da aplicação
-func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *handlers.AccountHandler, authHandler *handlers.AuthHandler, transactionHandler *handlers.TransactionHandler, exchangeHandler *handlers.ExchangeHandler, keepAliveHandler *handlers.KeepAliveHandler) *gin.Engine {
+func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *handlers.AccountHandler, authHandler *handlers.AuthHandler, transactionHandler *handlers.TransactionHandler, exchangeHandler *handlers.ExchangeHandler, ofxHandler *handlers.OFXHandler, keepAliveHandler *handlers.KeepAliveHandler) *gin.Engine {
 	router := gin.Default()
 
 	// Middleware CORS robusto
@@ -95,6 +95,17 @@ func SetupRoutes(categoryHandler *handlers.CategoryHandler, accountHandler *hand
 
 		exchange.POST("/rate", exchangeHandler.GetExchangeRate)
 		exchange.GET("/rate/simple", exchangeHandler.GetExchangeRateSimple)
+	}
+
+	// Grupo de rotas para importação OFX
+	ofx := router.Group("/api/ofx", handlers.SessionAuthMiddleware())
+	{
+		ofx.OPTIONS("", func(c *gin.Context) { c.Status(204) })
+		ofx.OPTIONS("/import", func(c *gin.Context) { c.Status(204) })
+		ofx.OPTIONS("/preview", func(c *gin.Context) { c.Status(204) })
+
+		ofx.POST("/preview", ofxHandler.PreviewOFX)
+		ofx.POST("/import", ofxHandler.ImportOFX)
 	}
 
 	// Rotas de autenticação
