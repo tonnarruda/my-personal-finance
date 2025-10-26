@@ -15,9 +15,10 @@ interface ModernPieChartProps {
   data: CategoryData[];
   title: string;
   currency: string;
+  showLegend?: boolean; // Nova prop para controlar a exibição da legenda
 }
 
-const ModernPieChart: React.FC<ModernPieChartProps> = ({ data, title, currency }) => {
+const ModernPieChart: React.FC<ModernPieChartProps> = ({ data, title, currency, showLegend = true }) => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryData | null>(null);
   const { isCollapsed } = useSidebar();
 
@@ -33,6 +34,20 @@ const ModernPieChart: React.FC<ModernPieChartProps> = ({ data, title, currency }
 
   // Função para calcular coordenadas do gráfico donut
   const calculateDonutSlice = (startAngle: number, endAngle: number, innerRadius: number, outerRadius: number) => {
+    // Caso especial: quando há apenas uma categoria (ângulo completo)
+    if (Math.abs(endAngle - startAngle - 2 * Math.PI) < 0.001) {
+      // Criar um círculo completo usando dois círculos concêntricos
+      return `
+        M ${outerRadius + outerRadius} ${outerRadius}
+        A ${outerRadius} ${outerRadius} 0 1 1 ${outerRadius - outerRadius} ${outerRadius}
+        A ${outerRadius} ${outerRadius} 0 1 1 ${outerRadius + outerRadius} ${outerRadius}
+        M ${outerRadius + innerRadius} ${outerRadius}
+        A ${innerRadius} ${innerRadius} 0 1 0 ${outerRadius - innerRadius} ${outerRadius}
+        A ${innerRadius} ${innerRadius} 0 1 0 ${outerRadius + innerRadius} ${outerRadius}
+        Z
+      `;
+    }
+
     const start = {
       inner: {
         x: Math.cos(startAngle) * innerRadius + outerRadius,
@@ -84,7 +99,7 @@ const ModernPieChart: React.FC<ModernPieChartProps> = ({ data, title, currency }
   return (
     <div className="bg-white rounded-2xl shadow p-8">
       <div className="text-xl font-bold text-gray-900 mb-6">{title}</div>
-      <div className="flex flex-col lg:flex-row items-start gap-8">
+      <div className={`flex flex-col lg:flex-row gap-8 ${showLegend ? 'items-start' : 'items-center justify-center'}`}>
         {/* Gráfico donut */}
         <div className="relative">
           <svg width={180} height={180} viewBox="0 0 180 180">
@@ -115,33 +130,35 @@ const ModernPieChart: React.FC<ModernPieChartProps> = ({ data, title, currency }
           )}
         </div>
 
-        {/* Legenda */}
-        <div className="flex-1 min-w-0">
-          <div className="space-y-0.5">
-            {data.map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
-                onClick={() => setSelectedCategory(item)}
-              >
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                <div className="flex-1 min-w-0 flex items-center justify-between gap-4">
-                  <div className="text-sm font-medium text-gray-900 truncate">
-                    {item.label}
-                  </div>
-                  <div className="flex items-center gap-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">
-                      {item.percent.toFixed(1)}%
+        {/* Legenda - apenas se showLegend for true */}
+        {showLegend && (
+          <div className="flex-1 min-w-0">
+            <div className="space-y-0.5">
+              {data.map((item, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
+                  onClick={() => setSelectedCategory(item)}
+                >
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                  <div className="flex-1 min-w-0 flex items-center justify-between gap-4">
+                    <div className="text-sm font-medium text-gray-900 truncate">
+                      {item.label}
                     </div>
-                    <div className="text-sm font-medium text-gray-900">
-                      {formatCurrency(item.value)}
+                    <div className="flex items-center gap-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">
+                        {item.percent.toFixed(1)}%
+                      </div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {formatCurrency(item.value)}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Modal de transações */}

@@ -22,6 +22,7 @@ interface AccountFormProps {
   onSubmit: (data: {
     name: string;
     type: 'income' | 'expense';
+    account_type: string;
     currency: string;
     color: string;
     is_active: boolean;
@@ -89,7 +90,7 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onCancel, 
           const initialTransaction = await accountService.getInitialTransaction(account.id);
           
           setFormData({
-            type: 'Conta Corrente',
+            type: account.account_type || 'Conta Corrente',
             accountType: (account.type as 'income' | 'expense') || 'income',
             currency: account.currency,
             name: account.name,
@@ -103,7 +104,7 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onCancel, 
           console.error('Erro ao buscar transação inicial:', error);
           // Se não conseguir buscar a transação inicial, usar valores padrão
           setFormData({
-            type: 'Conta Corrente',
+            type: account.account_type || 'Conta Corrente',
             accountType: (account.type as 'income' | 'expense') || 'income',
             currency: account.currency,
             name: account.name,
@@ -151,6 +152,7 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onCancel, 
       const submitData = {
         name: formData.name.trim(),
         type: formData.accountType,
+        account_type: formData.type,
         currency: formData.currency,
         color: formData.color,
         is_active: formData.is_active,
@@ -185,7 +187,6 @@ const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, onCancel, 
               value={formData.type}
               onChange={(value) => handleInputChange('type', value)}
               options={typeOptions}
-              disabled={!!account}
             />
           </div>
           <div>

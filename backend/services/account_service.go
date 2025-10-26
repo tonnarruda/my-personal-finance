@@ -40,15 +40,16 @@ func NewAccountService(db *database.Database, transactionCreator TransactionCrea
 // CreateAccount cria uma nova conta
 func (s *AccountService) CreateAccount(req structs.CreateAccountRequest) (*structs.Account, error) {
 	account := structs.Account{
-		ID:        utils.GenerateUUID(),
-		Currency:  req.Currency,
-		Name:      req.Name,
-		Color:     req.Color,
-		Type:      req.Type,
-		IsActive:  req.IsActive,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		UserID:    req.UserID,
+		ID:          utils.GenerateUUID(),
+		Currency:    req.Currency,
+		Name:        req.Name,
+		Color:       req.Color,
+		Type:        req.Type,
+		AccountType: req.AccountType,
+		IsActive:    req.IsActive,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+		UserID:      req.UserID,
 	}
 
 	if err := s.db.CreateAccount(account); err != nil {

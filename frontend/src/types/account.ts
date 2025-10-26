@@ -5,6 +5,7 @@ export interface Account {
   color: string;
   balance: number;
   type: string; // income ou expense
+  account_type?: string; // Conta Corrente, Conta Poupança, etc.
   user_id: string;
   is_active: boolean;
   created_at: string;
@@ -17,6 +18,7 @@ export interface CreateAccountRequest {
   name: string;
   color?: string;
   type: string; // income ou expense
+  account_type?: string; // Conta Corrente, Conta Poupança, etc.
   is_active?: boolean;
   due_date?: string;
   competence_date?: string;
@@ -28,6 +30,7 @@ export interface UpdateAccountRequest {
   name?: string;
   color?: string;
   type?: string; // income ou expense
+  account_type?: string; // Conta Corrente, Conta Poupança, etc.
   is_active?: boolean;
   user_id?: string;
   due_date?: string;

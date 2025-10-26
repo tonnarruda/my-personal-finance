@@ -29,7 +29,7 @@ start-frontend: ## Inicia o frontend na porta 3000
 	@cd frontend && npm start &
 	@echo "$(GREEN)✅ Frontend iniciado na porta 3000$(NC)"
 
-start-all: kill-ports start-backend start-frontend ## Mata processos e inicia backend e frontend
+run-all: kill-ports start-backend start-frontend ## Mata processos e inicia backend e frontend
 	@echo "$(GREEN)🚀 Aplicação iniciada!$(NC)"
 	@echo "$(YELLOW)Backend: http://localhost:8080$(NC)"
 	@echo "$(YELLOW)Frontend: http://localhost:3000$(NC)"
